@@ -1,0 +1,8 @@
+{
+  "name": "rust",
+  "description": "Rust ownership, error handling, traits, and idiomatic patterns",
+  "tags": ["rust", "systems", "backend"],
+  "triggers": { "files": ["Cargo.toml"] },
+  "targets": ["claude-code"],
+  "version": "1.0.0"
+}

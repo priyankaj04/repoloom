@@ -1,0 +1,24 @@
+{
+  "name": "repoloom-skill-ui-polish",
+  "version": "1.0.0",
+  "description": "UI/UX polish — spacing, typography, shadows, motion, hit areas, interaction states",
+  "keywords": [
+    "repoloom-skill",
+    "ui",
+    "ux",
+    "design",
+    "css",
+    "polish",
+    "frontend",
+    "claude-code"
+  ],
+  "license": "MIT",
+  "files": [
+    "skill.json",
+    "skill.md",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

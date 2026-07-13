@@ -1,0 +1,8 @@
+{
+  "name": "motion",
+  "description": "React animation with Framer Motion — spring presets, performance, accessibility",
+  "tags": ["framer-motion", "animation", "react", "typescript", "ui"],
+  "triggers": { "dependencies": ["framer-motion", "motion"] },
+  "targets": ["claude-code"],
+  "version": "1.0.0"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "typescript",
+  "description": "TypeScript strict mode, type safety, generics, and utility types",
+  "tags": ["typescript", "javascript", "types", "strict"],
+  "triggers": { "dependencies": ["typescript"] },
+  "targets": ["claude-code"],
+  "version": "1.0.0"
+}

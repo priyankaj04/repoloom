@@ -1,0 +1,8 @@
+{
+  "name": "golang",
+  "description": "Idiomatic Go patterns, error handling, interfaces, concurrency",
+  "tags": ["go", "golang", "backend", "systems"],
+  "triggers": { "files": ["go.mod"] },
+  "targets": ["claude-code"],
+  "version": "1.0.0"
+}

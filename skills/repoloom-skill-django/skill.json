@@ -1,0 +1,8 @@
+{
+  "name": "django",
+  "description": "Django patterns, ORM best practices, migrations, class-based views",
+  "tags": ["django", "python", "backend", "orm", "web"],
+  "triggers": { "dependencies": ["django", "Django"] },
+  "targets": ["claude-code"],
+  "version": "1.0.0"
+}

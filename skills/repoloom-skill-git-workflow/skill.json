@@ -1,0 +1,8 @@
+{
+  "name": "git-workflow",
+  "description": "Git branching strategies, commit conventions, PR best practices",
+  "tags": ["git", "workflow", "commits", "branching", "collaboration"],
+  "triggers": { "files": [".git"] },
+  "targets": ["claude-code"],
+  "version": "1.0.0"
+}

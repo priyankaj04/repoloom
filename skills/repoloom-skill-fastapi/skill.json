@@ -1,0 +1,8 @@
+{
+  "name": "fastapi",
+  "description": "FastAPI patterns, Pydantic models, async endpoints, dependency injection",
+  "tags": ["fastapi", "python", "api", "async", "pydantic"],
+  "triggers": { "dependencies": ["fastapi"] },
+  "targets": ["claude-code"],
+  "version": "1.0.0"
+}

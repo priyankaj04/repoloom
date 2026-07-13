@@ -1,0 +1,8 @@
+{
+  "name": "ui-polish",
+  "description": "UI/UX polish — spacing, typography, shadows, motion, hit areas, interaction states",
+  "tags": ["ui", "ux", "design", "css", "polish", "frontend"],
+  "triggers": { "dependencies": ["react", "vue", "svelte"] },
+  "targets": ["claude-code"],
+  "version": "1.0.0"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "docker",
+  "description": "Dockerfile best practices, multi-stage builds, compose patterns",
+  "tags": ["docker", "containers", "devops", "deployment"],
+  "triggers": { "files": ["Dockerfile", "docker-compose.yml", "docker-compose.yaml"] },
+  "targets": ["claude-code"],
+  "version": "1.0.0"
+}

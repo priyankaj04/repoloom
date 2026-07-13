@@ -1,0 +1,8 @@
+{
+  "name": "caveman",
+  "description": "Reduce Claude output tokens 65% with caveman communication mode",
+  "tags": ["tokens", "efficiency", "compression", "claude-code"],
+  "triggers": {},
+  "targets": ["claude-code"],
+  "version": "1.0.0"
+}

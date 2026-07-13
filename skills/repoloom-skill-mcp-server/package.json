@@ -1,0 +1,23 @@
+{
+  "name": "repoloom-skill-mcp-server",
+  "version": "1.0.0",
+  "description": "Build MCP servers with Node/TypeScript SDK — tools, resources, prompts, Zod validation",
+  "keywords": [
+    "repoloom-skill",
+    "mcp",
+    "typescript",
+    "sdk",
+    "tools",
+    "ai",
+    "claude-code"
+  ],
+  "license": "MIT",
+  "files": [
+    "skill.json",
+    "skill.md",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

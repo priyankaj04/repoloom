@@ -1,0 +1,8 @@
+{
+  "name": "vue",
+  "description": "Vue 3 Composition API, reactivity, Pinia state management",
+  "tags": ["vue", "vue3", "javascript", "typescript", "frontend"],
+  "triggers": { "dependencies": ["vue"] },
+  "targets": ["claude-code"],
+  "version": "1.0.0"
+}

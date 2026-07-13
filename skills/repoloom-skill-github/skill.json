@@ -1,0 +1,8 @@
+{
+  "name": "github",
+  "description": "GitHub CLI — issues, PR status, CI logs, reviews, releases",
+  "tags": ["github", "git", "cli", "automation", "devops"],
+  "triggers": { "files": [".github"] },
+  "targets": ["claude-code"],
+  "version": "1.0.0"
+}

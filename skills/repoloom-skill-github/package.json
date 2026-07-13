@@ -1,0 +1,23 @@
+{
+  "name": "repoloom-skill-github",
+  "version": "1.0.0",
+  "description": "GitHub CLI — issues, PR status, CI logs, reviews, releases",
+  "keywords": [
+    "repoloom-skill",
+    "github",
+    "git",
+    "cli",
+    "automation",
+    "devops",
+    "claude-code"
+  ],
+  "license": "MIT",
+  "files": [
+    "skill.json",
+    "skill.md",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

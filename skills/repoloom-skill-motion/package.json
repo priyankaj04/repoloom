@@ -1,0 +1,23 @@
+{
+  "name": "repoloom-skill-motion",
+  "version": "1.0.0",
+  "description": "React animation with Framer Motion — spring presets, performance, accessibility",
+  "keywords": [
+    "repoloom-skill",
+    "framer-motion",
+    "animation",
+    "react",
+    "typescript",
+    "ui",
+    "claude-code"
+  ],
+  "license": "MIT",
+  "files": [
+    "skill.json",
+    "skill.md",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
