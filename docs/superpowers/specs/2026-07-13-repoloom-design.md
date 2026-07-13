@@ -37,7 +37,7 @@ Engineers using Claude Code must manually discover and install skills that impro
 
 ## CLI Commands
 
-```
+```sh
 npx repoloom analyze          # fingerprint project → LLM ranks → show recommendations → install selected
 npx repoloom install <skill>  # install a specific skill by name
 npx repoloom sync             # install all skills from repoloom.lock (for teammates)
@@ -84,6 +84,7 @@ interface ProjectFingerprint {
 ```
 
 Detection sources:
+
 - `package.json` dependencies and devDependencies
 - `pyproject.toml` / `requirements.txt`
 - `Cargo.toml`, `go.mod`, `pom.xml`, `build.gradle`
@@ -107,10 +108,10 @@ Handles file placement and lock file management.
 
 **Install modes:**
 
-| Flag | Destination | Use case |
-|------|-------------|----------|
-| `--global` (default) | `~/.claude/plugins/<skill-name>/` | personal, cross-project |
-| `--local` | `.claude/skills/<skill-name>/` | team-shared, committed to git |
+| Flag              | Destination                          | Use case                      |
+|-------------------|--------------------------------------|-------------------------------|
+| `--global` (default) | `~/.claude/plugins/<skill-name>/` | personal, cross-project       |
+| `--local`         | `.claude/skills/<skill-name>/`       | team-shared, committed to git |
 
 **Lock file (`repoloom.lock`):**
 
@@ -135,7 +136,7 @@ For skill authors. Two modes:
 
 **Generated structure:**
 
-```
+```text
 repoloom-skill-<name>/
 ├── skill.md        # Claude Code skill instructions
 ├── skill.json      # manifest
@@ -160,6 +161,7 @@ repoloom-skill-<name>/
 ```
 
 **Validation checks before publish:**
+
 - Package name matches `repoloom-skill-*` or `@scope/repoloom-skill-*`
 - `skill.json` has all required fields: `name`, `description`, `tags`, `targets`, `version`
 - `skill.md` is non-empty
@@ -169,7 +171,7 @@ repoloom-skill-<name>/
 
 ## Dependency Surface
 
-```
+```text
 repoloom
 ├── @anthropic-ai/sdk    — Claude API for ranking
 ├── ora                  — spinner UX during analysis
@@ -182,7 +184,7 @@ No bundler, no framework. Node built-ins for all file I/O. Minimizes install tim
 
 ## Data Flow Summary
 
-```
+```text
 npx repoloom analyze
        │
        ▼
