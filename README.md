@@ -78,7 +78,7 @@ npx repoloom publish
 
 A skill package contains:
 
-```
+```text
 repoloom-skill-<name>/
 ├── skill.md        # Claude Code instructions
 ├── skill.json      # manifest: tags, triggers, targets
