@@ -104,11 +104,11 @@ repoloom-skill-<name>/
 
 `repoloom analyze` works without an API key using tag-based matching, but setting one enables smarter LLM-ranked recommendations via Claude.
 
-**1. Get your API key**
+### 1. Get your API key
 
 Go to [console.anthropic.com](https://console.anthropic.com) → API Keys → **Create Key**. Copy the key (starts with `sk-ant-`).
 
-**2. Set the key**
+### 2. Set the key
 
 For the current terminal session only:
 
@@ -125,7 +125,7 @@ source ~/.zshrc
 
 If you use bash instead of zsh, replace `~/.zshrc` with `~/.bashrc`.
 
-**3. Verify**
+### 3. Verify
 
 ```sh
 echo $ANTHROPIC_API_KEY
