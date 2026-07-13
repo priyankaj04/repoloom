@@ -1,5 +1,7 @@
-#!/usr/bin/env node
-import { createRequire } from 'node:module'
+#!/usr/bin/env -S node --no-warnings
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { Command } from 'commander'
 import { analyzeCommand } from './commands/analyze.js'
 import { installCommand } from './commands/install.js'
@@ -8,8 +10,10 @@ import { listCommand } from './commands/list.js'
 import { removeCommand } from './commands/remove.js'
 import { publishCommand } from './commands/publish.js'
 
-const require = createRequire(import.meta.url)
-const pkg = require('../package.json') as { version: string }
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const pkg = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8')
+) as { version: string }
 
 const program = new Command()
 
