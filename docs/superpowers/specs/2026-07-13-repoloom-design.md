@@ -55,7 +55,7 @@ npx repoloom publish          # scaffold + validate + publish a skill to npm
 5. User confirms which to install (interactive multi-select)
 6. Installer places skill files, writes/updates `repoloom.lock`
 
-If a `repoloom.lock` already exists in the project, `analyze` defaults to `--local` install. Otherwise defaults to `--global`.
+If a `repoloom.lock` already exists in the project root, `analyze` defaults to `--local` (project is already using repoloom as a team). If no lock file exists, defaults to `--global` (first-time personal use). User can override either way with `--local` or `--global` flags.
 
 ### `sync` flow (team onboarding)
 
@@ -124,7 +124,7 @@ Handles file placement and lock file management.
 }
 ```
 
-Written on every `install` or `remove`. Read by `sync`. Committed to git for team reproducibility.
+Written/updated only for `--local` installs. Global installs do not touch `repoloom.lock` — they belong to the user, not the project. Read by `sync`. Committed to git for team reproducibility.
 
 ### Module: `publisher`
 
