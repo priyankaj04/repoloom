@@ -1,0 +1,9 @@
+{
+  "name": "repoloom-skill-fastapi",
+  "version": "1.0.0",
+  "description": "FastAPI patterns, Pydantic models, async endpoints, dependency injection",
+  "main": "skill.md",
+  "files": ["skill.md", "skill.json"],
+  "keywords": ["repoloom-skill", "fastapi", "python", "api", "async", "pydantic"],
+  "license": "MIT"
+}

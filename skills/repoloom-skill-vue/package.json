@@ -1,0 +1,9 @@
+{
+  "name": "repoloom-skill-vue",
+  "version": "1.0.0",
+  "description": "Vue 3 Composition API, reactivity, Pinia state management",
+  "main": "skill.md",
+  "files": ["skill.md", "skill.json"],
+  "keywords": ["repoloom-skill", "vue", "vue3", "javascript", "typescript", "frontend"],
+  "license": "MIT"
+}

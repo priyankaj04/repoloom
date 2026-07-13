@@ -1,0 +1,9 @@
+{
+  "name": "repoloom-skill-nuxt",
+  "version": "1.0.0",
+  "description": "Nuxt 4 patterns, hydration safety, SSR, route rules, and lazy loading",
+  "main": "skill.md",
+  "files": ["skill.md", "skill.json"],
+  "keywords": ["repoloom-skill", "nuxt", "vue", "typescript", "ssr", "nuxt4"],
+  "license": "MIT"
+}

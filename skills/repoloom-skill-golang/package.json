@@ -1,0 +1,24 @@
+{
+  "name": "repoloom-skill-golang",
+  "version": "1.0.0",
+  "description": "Repoloom skill: idiomatic Go patterns, error handling, interfaces, concurrency",
+  "main": "skill.json",
+  "keywords": [
+    "repoloom-skill",
+    "go",
+    "golang",
+    "backend",
+    "systems",
+    "claude-code"
+  ],
+  "author": "repoloom",
+  "license": "MIT",
+  "files": [
+    "skill.json",
+    "skill.md",
+    "README.md"
+  ],
+  "repoloom": {
+    "skill": "skill.json"
+  }
+}

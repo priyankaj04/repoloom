@@ -1,0 +1,25 @@
+{
+  "name": "repoloom-skill-django",
+  "version": "1.0.0",
+  "description": "Repoloom skill: Django patterns, ORM best practices, migrations, class-based views",
+  "main": "skill.json",
+  "keywords": [
+    "repoloom-skill",
+    "django",
+    "python",
+    "backend",
+    "orm",
+    "web",
+    "claude-code"
+  ],
+  "author": "repoloom",
+  "license": "MIT",
+  "files": [
+    "skill.json",
+    "skill.md",
+    "README.md"
+  ],
+  "repoloom": {
+    "skill": "skill.json"
+  }
+}

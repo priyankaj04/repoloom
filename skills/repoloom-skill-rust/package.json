@@ -1,0 +1,23 @@
+{
+  "name": "repoloom-skill-rust",
+  "version": "1.0.0",
+  "description": "Repoloom skill: Rust ownership, error handling, traits, and idiomatic patterns",
+  "main": "skill.json",
+  "keywords": [
+    "repoloom-skill",
+    "rust",
+    "systems",
+    "backend",
+    "claude-code"
+  ],
+  "author": "repoloom",
+  "license": "MIT",
+  "files": [
+    "skill.json",
+    "skill.md",
+    "README.md"
+  ],
+  "repoloom": {
+    "skill": "skill.json"
+  }
+}

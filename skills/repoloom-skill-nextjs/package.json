@@ -1,0 +1,9 @@
+{
+  "name": "repoloom-skill-nextjs",
+  "version": "1.0.0",
+  "description": "Next.js App Router, Server Components, Turbopack, and SSR patterns",
+  "main": "skill.md",
+  "files": ["skill.md", "skill.json"],
+  "keywords": ["repoloom-skill", "nextjs", "react", "typescript", "ssr", "app-router"],
+  "license": "MIT"
+}
