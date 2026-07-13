@@ -8,6 +8,11 @@ export async function removeCommand(
 ): Promise<void> {
   const mode: InstallOptions['mode'] = opts.local ? 'local' : 'global'
   const spinner = ora(`Removing ${packageName}...`).start()
-  remove(packageName, process.cwd(), { mode })
-  spinner.succeed(`Removed ${packageName} (${mode})`)
+  try {
+    remove(packageName, process.cwd(), { mode })
+    spinner.succeed(`Removed ${packageName} (${mode})`)
+  } catch (err) {
+    spinner.fail(`Failed to remove ${packageName}`)
+    throw err
+  }
 }

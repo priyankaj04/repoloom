@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createRequire } from 'node:module'
 import { Command } from 'commander'
 import { analyzeCommand } from './commands/analyze.js'
 import { installCommand } from './commands/install.js'
@@ -7,12 +8,15 @@ import { listCommand } from './commands/list.js'
 import { removeCommand } from './commands/remove.js'
 import { publishCommand } from './commands/publish.js'
 
+const require = createRequire(import.meta.url)
+const pkg = require('../package.json') as { version: string }
+
 const program = new Command()
 
 program
   .name('repoloom')
   .description('Analyze your project and install the right Claude Code skills')
-  .version('1.0.0')
+  .version(pkg.version)
 
 program
   .command('analyze')
