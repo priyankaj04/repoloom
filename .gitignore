@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Test coverage
+coverage/
+
+# Environment
+.env
+.env.local
+
+# macOS
+.DS_Store
+
+# npm pack artifacts
+*.tgz
+
+# Editor
+.vscode/
+.idea/
+
+# Superpowers brainstorm files
+.superpowers/
+
+# repoloom cache
+.repoloom/
