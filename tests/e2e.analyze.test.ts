@@ -59,17 +59,17 @@ describe('analyze flow (E2E)', () => {
       },
     ])
 
-    vi.mocked(childProcess.execSync).mockImplementation((cmd: string) => {
-      const cmdStr = cmd.toString()
-      if (cmdStr.startsWith('npm pack')) {
-        const destMatch = cmdStr.match(/--pack-destination (\S+)/)
-        if (destMatch) {
-          fs.writeFileSync(path.join(destMatch[1], 'repoloom-skill-react-1.2.0.tgz'), '')
+    vi.mocked(childProcess.execFileSync).mockImplementation((cmd: string, args?: readonly string[]) => {
+      const argList = args ?? []
+      if (cmd === 'npm' && argList[0] === 'pack') {
+        const destIdx = argList.indexOf('--pack-destination')
+        if (destIdx !== -1) {
+          fs.writeFileSync(path.join(argList[destIdx + 1], 'repoloom-skill-react-1.2.0.tgz'), '')
         }
-      } else if (cmdStr.startsWith('tar')) {
-        const destMatch = cmdStr.match(/-C (\S+)/)
-        if (destMatch) {
-          const pkgDir = path.join(destMatch[1], 'package')
+      } else if (cmd === 'tar') {
+        const destIdx = argList.indexOf('-C')
+        if (destIdx !== -1) {
+          const pkgDir = path.join(argList[destIdx + 1], 'package')
           fs.mkdirSync(pkgDir, { recursive: true })
           fs.writeFileSync(path.join(pkgDir, 'skill.md'), '# React Skill')
           fs.writeFileSync(path.join(pkgDir, 'skill.json'), '{"name":"react"}')

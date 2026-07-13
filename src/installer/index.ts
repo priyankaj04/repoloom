@@ -1,13 +1,14 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { execSync } from 'node:child_process'
+import os from 'node:os'
+import { execFileSync } from 'node:child_process'
 import type { InstallOptions, LockFile } from '../types.js'
 
 const LOCAL_SKILLS_SUBDIR = path.join('.claude', 'skills')
 const LOCK_FILE = 'repoloom.lock'
 
 function globalPluginsDir(): string {
-  return path.join(process.env.HOME!, '.claude', 'plugins')
+  return path.join(os.homedir(), '.claude', 'plugins')
 }
 
 function destDir(packageName: string, projectDir: string, mode: InstallOptions['mode']): string {
@@ -25,11 +26,11 @@ export function install(
   const dest = destDir(packageName, projectDir, opts.mode)
   if (fs.existsSync(dest) && !opts.force) return
 
-  const tmp = fs.mkdtempSync(path.join(process.env.TMPDIR ?? '/tmp', 'repoloom-'))
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'repoloom-'))
   try {
-    execSync(`npm pack ${packageName}@${version} --pack-destination ${tmp}`, { stdio: 'pipe' })
+    execFileSync('npm', ['pack', `${packageName}@${version}`, '--pack-destination', tmp], { stdio: 'pipe' })
     const tarball = fs.readdirSync(tmp).find(f => f.endsWith('.tgz'))!
-    execSync(`tar -xzf ${path.join(tmp, tarball)} -C ${tmp}`, { stdio: 'pipe' })
+    execFileSync('tar', ['-xzf', path.join(tmp, tarball), '-C', tmp], { stdio: 'pipe' })
 
     fs.mkdirSync(dest, { recursive: true })
     for (const file of ['skill.md', 'skill.json']) {

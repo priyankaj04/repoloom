@@ -17,17 +17,17 @@ describe('installer', () => {
     tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'repoloom-home-'))
     process.env.HOME = tmpHome
 
-    vi.mocked(childProcess.execSync).mockImplementation((cmd: string) => {
-      const cmdStr = cmd.toString()
-      if (cmdStr.startsWith('npm pack')) {
-        const destMatch = cmdStr.match(/--pack-destination (\S+)/)
-        if (destMatch) {
-          fs.writeFileSync(path.join(destMatch[1], 'repoloom-skill-test-1.0.0.tgz'), '')
+    vi.mocked(childProcess.execFileSync).mockImplementation((cmd: string, args?: readonly string[]) => {
+      const argList = args ?? []
+      if (cmd === 'npm' && argList[0] === 'pack') {
+        const destIdx = argList.indexOf('--pack-destination')
+        if (destIdx !== -1) {
+          fs.writeFileSync(path.join(argList[destIdx + 1], 'repoloom-skill-test-1.0.0.tgz'), '')
         }
-      } else if (cmdStr.startsWith('tar')) {
-        const destMatch = cmdStr.match(/-C (\S+)/)
-        if (destMatch) {
-          const pkgDir = path.join(destMatch[1], 'package')
+      } else if (cmd === 'tar') {
+        const destIdx = argList.indexOf('-C')
+        if (destIdx !== -1) {
+          const pkgDir = path.join(argList[destIdx + 1], 'package')
           fs.mkdirSync(pkgDir, { recursive: true })
           fs.writeFileSync(path.join(pkgDir, 'skill.md'), '# skill')
           fs.writeFileSync(path.join(pkgDir, 'skill.json'), '{}')
@@ -70,14 +70,14 @@ describe('installer', () => {
   it('is idempotent — skips download when already installed', () => {
     install('repoloom-skill-react', '1.0.0', tmpDir, { mode: 'local' })
     install('repoloom-skill-react', '1.0.0', tmpDir, { mode: 'local' })
-    // execSync called twice (npm pack + tar) only for the first install
-    expect(childProcess.execSync).toHaveBeenCalledTimes(2)
+    // execFileSync called twice (npm pack + tar) only for the first install
+    expect(childProcess.execFileSync).toHaveBeenCalledTimes(2)
   })
 
   it('force flag reinstalls even when already installed', () => {
     install('repoloom-skill-react', '1.0.0', tmpDir, { mode: 'local' })
     install('repoloom-skill-react', '1.0.0', tmpDir, { mode: 'local', force: true })
-    expect(childProcess.execSync).toHaveBeenCalledTimes(4)
+    expect(childProcess.execFileSync).toHaveBeenCalledTimes(4)
   })
 
   it('remove deletes skill dir and updates lock file', () => {

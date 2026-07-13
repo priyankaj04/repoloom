@@ -53,11 +53,13 @@ Only include skills from the available list. Return only valid JSON, no markdown
   })
 
   const text = message.content[0].type === 'text' ? message.content[0].text : '[]'
-  const rankings = JSON.parse(text) as Array<{
-    packageName: string
-    rank: number
-    explanation: string
-  }>
+  let rankings: Array<{ packageName: string; rank: number; explanation: string }> = []
+  try {
+    rankings = JSON.parse(text) as typeof rankings
+  } catch {
+    // Claude returned non-JSON — fall back to empty (no recommendations)
+    return []
+  }
 
   return rankings
     .map(r => {

@@ -1,10 +1,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import crypto from 'node:crypto'
 import type { ProjectFingerprint, RankedSkill } from '../types.js'
 
 function cacheDir(): string {
-  return path.join(process.env.HOME!, '.repoloom', 'cache')
+  return path.join(os.homedir(), '.repoloom', 'cache')
 }
 
 export function getCacheKey(fingerprint: ProjectFingerprint): string {
