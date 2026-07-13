@@ -36,7 +36,10 @@ function detectStack(dir: string): {
   const pkg = readJson(dir, 'package.json')
   if (pkg) {
     languages.push('javascript')
-    const deps = { ...pkg.dependencies, ...pkg.devDependencies } as Record<string, string>
+    const deps = {
+      ...(pkg.dependencies as Record<string, string> | undefined),
+      ...(pkg.devDependencies as Record<string, string> | undefined),
+    }
     if (deps['typescript']) languages.push('typescript')
     if (deps['react']) frameworks.push('react')
     if (deps['next']) frameworks.push('nextjs')
