@@ -100,10 +100,43 @@ repoloom-skill-<name>/
 }
 ```
 
+## Setting up ANTHROPIC_API_KEY
+
+`repoloom analyze` works without an API key using tag-based matching, but setting one enables smarter LLM-ranked recommendations via Claude.
+
+**1. Get your API key**
+
+Go to [console.anthropic.com](https://console.anthropic.com) → API Keys → **Create Key**. Copy the key (starts with `sk-ant-`).
+
+**2. Set the key**
+
+For the current terminal session only:
+
+```sh
+export ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+To make it permanent (persists across terminal restarts):
+
+```sh
+echo 'export ANTHROPIC_API_KEY=sk-ant-your-key-here' >> ~/.zshrc
+source ~/.zshrc
+```
+
+If you use bash instead of zsh, replace `~/.zshrc` with `~/.bashrc`.
+
+**3. Verify**
+
+```sh
+echo $ANTHROPIC_API_KEY
+```
+
+Once set, `npx repoloom analyze` will automatically use Claude to rank skills for your project.
+
 ## Requirements
 
 - Node.js 20+
-- `ANTHROPIC_API_KEY` (optional — enables LLM ranking)
+- `ANTHROPIC_API_KEY` (optional — enables LLM-ranked recommendations)
 
 ## License
 
