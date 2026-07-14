@@ -85,15 +85,16 @@ function detectMonorepo(dir: string): boolean {
   )
 }
 
-// Only count as "installed" dirs that contain a SKILL.md file
-// Excludes system dirs (cache, data, marketplaces) and old bundled repoloom-skill-* packages
+// Count as "installed": dirs with SKILL.md (skills) or .claude-plugin/ (plugins)
+// Excludes system dirs, old bundled repoloom-skill-* packages
 function detectInstalledSkills(dir: string): string[] {
   const found = new Set<string>()
-  const searchDirs = [
+
+  const skillDirs = [
     path.join(dir, '.claude', 'skills'),
     path.join(os.homedir(), '.claude', 'skills'),
   ]
-  for (const d of searchDirs) {
+  for (const d of skillDirs) {
     if (!fs.existsSync(d)) continue
     for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue
@@ -104,6 +105,24 @@ function detectInstalledSkills(dir: string): string[] {
       }
     }
   }
+
+  const pluginDirs = [
+    path.join(dir, '.claude', 'plugins'),
+    path.join(os.homedir(), '.claude', 'plugins'),
+  ]
+  for (const d of pluginDirs) {
+    if (!fs.existsSync(d)) continue
+    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue
+      // Only count dirs that look like installed plugins (have .claude-plugin/ or skills/ inside)
+      const pluginMeta = path.join(d, entry.name, '.claude-plugin')
+      const pluginSkills = path.join(d, entry.name, 'skills')
+      if (fs.existsSync(pluginMeta) || fs.existsSync(pluginSkills)) {
+        found.add(entry.name)
+      }
+    }
+  }
+
   return [...found]
 }
 

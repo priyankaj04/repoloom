@@ -144,20 +144,22 @@ export async function analyzeCommand(): Promise<void> {
       const result = installSkillFromGit(gitRepo, detail.slug, targetBaseDir, platform)
 
       switch (result.status) {
-        case 'installed':
+        case 'installed': {
           installedCount++
           writeLock(projectDir, detail.slug, gitRepo)
-          installSpinner.succeed(
-            `${detail.name} [${result.type}] → ${path.relative(projectDir, result.installedPaths[0])}/`
-          )
+          const dest = path.relative(projectDir, result.installedPaths[0])
+          const typeTag = result.type === 'plugin' ? 'plugin → .claude/plugins/' : `skill → ${dest}/`
+          installSpinner.succeed(`${detail.name} [${typeTag}]`)
           break
+        }
 
         case 'multi-installed': {
           multiCount += result.installedPaths.length
           writeLock(projectDir, detail.slug, gitRepo)
           const names = result.installedPaths.map(p => path.basename(p)).join(', ')
+          const typeTag = result.type === 'plugin' ? 'plugin' : 'bundle'
           installSpinner.succeed(
-            `${detail.name} [bundle: ${result.installedPaths.length} skills] → ${names}`
+            `${detail.name} [${typeTag}: ${result.installedPaths.length}] → ${names}`
           )
           break
         }

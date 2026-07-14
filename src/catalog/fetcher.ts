@@ -175,35 +175,41 @@ export function installSkillFromGit(
     })
 
     const type = detectRepoType(tmp)
-    const skillDirs = findAllSkillDirs(tmp)
-
-    if (skillDirs.length === 0) {
-      return { slug, status: 'no-skill-file', type, installedPaths: [] }
-    }
-
     const installedPaths: string[] = []
 
-    if (platform === 'claude-code' || platform === 'codex-cli') {
-      // Copy full skill directory
-      for (const { name, dirPath } of skillDirs) {
-        const targetDir = path.join(baseSkillsDir, name)
-        fs.mkdirSync(targetDir, { recursive: true })
-        for (const file of fs.readdirSync(dirPath, { withFileTypes: true })) {
-          if (file.isFile()) {
-            fs.copyFileSync(path.join(dirPath, file.name), path.join(targetDir, file.name))
-          }
-        }
-        installedPaths.push(targetDir)
-      }
+    if (type === 'plugin' && platform === 'claude-code') {
+      // Claude Code plugin: copy entire repo to .claude/plugins/{slug}/
+      const pluginsDir = path.join(path.dirname(baseSkillsDir), 'plugins')
+      const targetDir = path.join(pluginsDir, slug)
+      fs.mkdirSync(targetDir, { recursive: true })
+      copyDirRecursive(tmp, targetDir)
+      installedPaths.push(targetDir)
     } else {
-      // For other platforms: install SKILL.md content via platform-specific method
-      const projectDir = path.dirname(path.dirname(baseSkillsDir)) // baseSkillsDir is project/.claude/skills
-      for (const { name, dirPath } of skillDirs) {
-        const skillMdPath = fs.readdirSync(dirPath).find(f => f.toLowerCase() === 'skill.md')
-        if (!skillMdPath) continue
-        const content = fs.readFileSync(path.join(dirPath, skillMdPath), 'utf8')
-        const result = installSkillForPlatform(content, name, projectDir, platform)
-        if (result.ok) installedPaths.push(result.path)
+      const skillDirs = findAllSkillDirs(tmp)
+      if (skillDirs.length === 0) {
+        return { slug, status: 'no-skill-file', type, installedPaths: [] }
+      }
+
+      if (platform === 'claude-code' || platform === 'codex-cli') {
+        for (const { name, dirPath } of skillDirs) {
+          const targetDir = path.join(baseSkillsDir, name)
+          fs.mkdirSync(targetDir, { recursive: true })
+          for (const file of fs.readdirSync(dirPath, { withFileTypes: true })) {
+            if (file.isFile()) {
+              fs.copyFileSync(path.join(dirPath, file.name), path.join(targetDir, file.name))
+            }
+          }
+          installedPaths.push(targetDir)
+        }
+      } else {
+        const projectDir = path.dirname(path.dirname(baseSkillsDir))
+        for (const { name, dirPath } of skillDirs) {
+          const skillMdPath = fs.readdirSync(dirPath).find(f => f.toLowerCase() === 'skill.md')
+          if (!skillMdPath) continue
+          const content = fs.readFileSync(path.join(dirPath, skillMdPath), 'utf8')
+          const result = installSkillForPlatform(content, name, projectDir, platform)
+          if (result.ok) installedPaths.push(result.path)
+        }
       }
     }
 
@@ -258,6 +264,20 @@ function findAllSkillDirs(repoRoot: string): Array<{ name: string; dirPath: stri
   }
 
   return found
+}
+
+function copyDirRecursive(src: string, dest: string): void {
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    if (entry.name === '.git') continue
+    const srcPath = path.join(src, entry.name)
+    const destPath = path.join(dest, entry.name)
+    if (entry.isDirectory()) {
+      fs.mkdirSync(destPath, { recursive: true })
+      copyDirRecursive(srcPath, destPath)
+    } else if (entry.isFile()) {
+      fs.copyFileSync(srcPath, destPath)
+    }
+  }
 }
 
 function hasSkillMd(dir: string): boolean {
