@@ -1,8 +1,10 @@
 {
   "version": 2,
-  "platform": "claude-code",
   "skills": {
     "playwright-skill": "https://github.com/lackeyjb/playwright-skill",
-    "context7": "https://github.com/upstash/context7"
+    "addyosmani-agent-skills": "https://github.com/addyosmani/agent-skills",
+    "claude-code-best-practice": "https://github.com/shanraisshan/claude-code-best-practice",
+    "claude-bughunter": "https://github.com/elementalsouls/Claude-BugHunter",
+    "superpowers": "https://github.com/obra/superpowers"
   }
 }

@@ -26,3 +26,5 @@ coverage/
 
 # repoloom cache
 .repoloom/
+
+.claude/
