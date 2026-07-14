@@ -50,7 +50,7 @@ ${JSON.stringify(
   2
 )}
 
-Return a JSON array of the top 5 most relevant skills for this project, most relevant first.
+Return a JSON array of the top 10 most relevant skills for this project, most relevant first.
 Each item: { "slug": string, "rank": number, "explanation": string (one sentence why it fits this project) }
 Only include skills from the available list. Return only valid JSON, no markdown fences.`,
       },
@@ -93,6 +93,6 @@ function tagBasedRanking(
     })
     .filter(c => c.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 5)
+    .slice(0, 10)
     .map((c, i) => ({ ...c, rank: i + 1 }))
 }

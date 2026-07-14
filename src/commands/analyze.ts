@@ -1,23 +1,19 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import ora from 'ora'
 import prompts from 'prompts'
 import { fingerprint } from '../fingerprinter/index.js'
 import { rankSkills } from '../ranker/index.js'
-import { fetchSkillDetail } from '../catalog/fetcher.js'
+import { fetchSkillDetail, installSkillFromGit } from '../catalog/fetcher.js'
 import type { RankedSkill } from '../types.js'
 
-const PLATFORM_LABELS: Record<string, string> = {
-  'claude-code': 'Claude Code',
-  'codex-cli': 'Codex CLI',
-  'cursor': 'Cursor',
-  'copilot': 'GitHub Copilot',
-  'gemini-cli': 'Gemini CLI',
-  'antigravity': 'Antigravity',
-  'kimi-code': 'Kimi Code',
-  'opencode': 'OpenCode',
-  'pi': 'Pi',
-  'chatgpt': 'ChatGPT',
-  'npm': 'npm',
-  'git': 'GitHub (git clone)',
+const LOCAL_SKILLS_DIR = path.join('.claude', 'skills')
+
+const QUALITY_LABEL = (stars: number) => {
+  if (stars >= 50000) return '⭐⭐⭐ Popular'
+  if (stars >= 10000) return '⭐⭐  Established'
+  if (stars >= 1000) return '⭐   Growing'
+  return '     New'
 }
 
 export async function analyzeCommand(): Promise<void> {
@@ -43,16 +39,22 @@ export async function analyzeCommand(): Promise<void> {
 
     console.log('\nRecommended skills:\n')
     for (const s of ranked) {
-      console.log(`  ${s.rank}. ${s.name} (${s.slug})`)
+      const quality = QUALITY_LABEL(s.stars)
+      const stars = s.stars > 0 ? `★${(s.stars / 1000).toFixed(1)}k` : ''
+      console.log(`  ${s.rank}. ${s.name} ${stars}`)
+      console.log(`     ${quality}  [${s.category}]`)
       console.log(`     ${s.explanation}`)
-      console.log(`     ${s.githubUrl}\n`)
+      console.log(`     ${s.githubUrl || s.slug}\n`)
     }
 
     const { selected } = await prompts({
       type: 'multiselect',
       name: 'selected',
-      message: 'Which skills would you like to install?',
-      choices: ranked.map(s => ({ title: `${s.name} ★${(s.stars / 1000).toFixed(1)}k`, value: s })),
+      message: 'Which skills to install? (local — .claude/skills/)',
+      choices: ranked.map(s => ({
+        title: `${s.name} ${s.stars > 0 ? `★${(s.stars / 1000).toFixed(1)}k` : ''}`,
+        value: s,
+      })),
     })
 
     if (!selected?.length) {
@@ -60,37 +62,72 @@ export async function analyzeCommand(): Promise<void> {
       return
     }
 
-    console.log('\nFetching install instructions...\n')
-    const detailSpinner = ora('').start()
+    console.log('\nFetching install details...\n')
+    const fetchSpinner = ora('').start()
 
     const details = await Promise.all(
-      (selected as RankedSkill[]).map(s => {
-        detailSpinner.text = `Fetching details for ${s.name}...`
+      (selected as RankedSkill[]).map(async s => {
+        fetchSpinner.text = `Fetching ${s.name}...`
         return fetchSkillDetail(s)
       })
     )
-    detailSpinner.stop()
+    fetchSpinner.stop()
 
+    const localSkillsDir = path.join(projectDir, LOCAL_SKILLS_DIR)
+    console.log(`Installing to ${LOCAL_SKILLS_DIR}/\n`)
     console.log('─'.repeat(60))
-    for (const detail of details) {
-      console.log(`\n📦 ${detail.name}`)
-      console.log(`   ${detail.description || detail.githubUrl}`)
 
-      const cmds = Object.entries(detail.installCommands)
-      if (cmds.length === 0) {
-        console.log(`\n   No install commands found. Visit: ${detail.githubUrl}`)
-      } else {
-        console.log('\n   Install commands:')
-        for (const [platform, cmd] of cmds) {
-          const label = PLATFORM_LABELS[platform] ?? platform
-          console.log(`\n   ${label}:`)
-          console.log(`     ${cmd}`)
+    for (const detail of details) {
+      const installSpinner = ora(`Installing ${detail.name}...`).start()
+      const targetDir = path.join(localSkillsDir, detail.slug)
+
+      // Skip if already installed
+      if (fs.existsSync(targetDir)) {
+        installSpinner.warn(`${detail.name} already installed at ${LOCAL_SKILLS_DIR}/${detail.slug}`)
+        continue
+      }
+
+      const gitRepo = detail.primaryGitRepo
+      if (gitRepo) {
+        const result = installSkillFromGit(gitRepo, detail.slug, targetDir)
+
+        if (result === 'installed') {
+          installSpinner.succeed(`Installed ${detail.name} → ${LOCAL_SKILLS_DIR}/${detail.slug}/`)
+          continue
+        } else if (result === 'no-skill-file') {
+          installSpinner.warn(`${detail.name}: no SKILL.md found in repo — showing manual commands`)
+        } else {
+          installSpinner.warn(`${detail.name}: git clone failed — showing manual commands`)
         }
+      } else {
+        installSpinner.stop()
+      }
+
+      // Fallback: print install commands
+      const cmds = Object.entries(detail.installCommands)
+      if (cmds.length > 0) {
+        console.log(`\n  ${detail.name} — manual install:`)
+        for (const [platform, cmd] of cmds) {
+          console.log(`\n  ${platform}:`)
+          // Only show first line of multi-line commands for brevity
+          console.log(`    ${cmd.split('\n')[0]}`)
+        }
+        console.log(`\n  Full details: https://skillsllm.com/skill/${detail.slug}`)
+      } else {
+        console.log(`\n  ${detail.name}: https://skillsllm.com/skill/${detail.slug}`)
       }
     }
 
     console.log('\n' + '─'.repeat(60))
-    console.log('\nRun the commands above for your platform to install these skills.')
+
+    const installedCount = details.filter(d =>
+      fs.existsSync(path.join(localSkillsDir, d.slug))
+    ).length
+
+    if (installedCount > 0) {
+      console.log(`\n${installedCount} skill(s) installed to ${LOCAL_SKILLS_DIR}/`)
+      console.log('Restart Claude Code to pick up the new skills.')
+    }
   } catch (err) {
     spinner.fail('Failed')
     throw err
