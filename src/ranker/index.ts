@@ -3,17 +3,35 @@ import type { ProjectFingerprint, RankedSkill } from '../types.js'
 import type { CatalogEntry } from '../catalog/fetcher.js'
 import { fetchCatalog } from '../catalog/index.js'
 
-export async function rankSkills(fingerprint: ProjectFingerprint): Promise<RankedSkill[]> {
+const INCREMENTAL_VALUE_THRESHOLD = 5  // skip anything adding ≤5/10 incremental value
+
+export interface RankResult {
+  skills: RankedSkill[]
+  wellCovered: boolean
+  coverageSummary: string
+}
+
+export async function rankSkills(fingerprint: ProjectFingerprint): Promise<RankResult> {
   const available = await fetchCatalog(fingerprint)
-  if (available.length === 0) return []
+  if (available.length === 0) {
+    return { skills: [], wellCovered: false, coverageSummary: 'No skills found in catalog.' }
+  }
 
   const candidates = available.filter(
     s => !fingerprint.installedSkills.includes(s.slug)
   )
-  if (candidates.length === 0) return []
+
+  if (candidates.length === 0) {
+    return { skills: [], wellCovered: true, coverageSummary: 'All catalog skills already installed.' }
+  }
 
   if (!process.env.ANTHROPIC_API_KEY) {
-    return tagBasedRanking(fingerprint, candidates)
+    const skills = tagBasedRanking(fingerprint, candidates)
+    return {
+      skills,
+      wellCovered: skills.length === 0,
+      coverageSummary: 'Tag-based matching (set ANTHROPIC_API_KEY for smarter analysis)',
+    }
   }
 
   return claudeRanking(fingerprint, candidates)
@@ -22,7 +40,7 @@ export async function rankSkills(fingerprint: ProjectFingerprint): Promise<Ranke
 async function claudeRanking(
   fingerprint: ProjectFingerprint,
   candidates: CatalogEntry[]
-): Promise<RankedSkill[]> {
+): Promise<RankResult> {
   const client = new Anthropic()
 
   const message = await client.messages.create({
@@ -31,12 +49,15 @@ async function claudeRanking(
     messages: [
       {
         role: 'user',
-        content: `You are brutally honest at rating AI agent skills for software projects. No fluff.
+        content: `You are brutally honest at evaluating AI agent skills for software projects.
 
 Project fingerprint:
 ${JSON.stringify(fingerprint, null, 2)}
 
-Available skills from skillsllm.com (sorted by stars descending):
+Already installed skills (DO NOT recommend these):
+${fingerprint.installedSkills.length > 0 ? fingerprint.installedSkills.join(', ') : 'none'}
+
+Candidate skills NOT yet installed:
 ${JSON.stringify(
   [...candidates]
     .sort((a, b) => b.stars - a.stars)
@@ -53,51 +74,68 @@ ${JSON.stringify(
   2
 )}
 
-Pick the top 10 most useful skills for this specific project. Hard rules:
-- EXCLUDE anything that is an AI platform/tool itself (claude-code, codex, gemini-cli, cursor, copilot, n8n, etc.) — those are platforms, not skills.
-- EXCLUDE MCP servers — they require config-file setup, not skill install.
-- EXCLUDE anything where installation means "run this CLI tool" rather than providing AI instructions.
-- ONLY include actual skill/plugin repos that contain SKILL.md or .claude-plugin and provide AI coding instructions.
-- If a skill is vague, generic, or just wraps a CLI tool, score it low.
-- High stars ≠ high quality. Judge on fit and actual utility for THIS project.
-- Prefer skills with real patterns, checklists, domain expertise the LLM can directly use.
-- Security, testing, and stack-specific skills are almost always high value.
+Your job: evaluate INCREMENTAL VALUE each candidate adds GIVEN what's already installed.
+If the user already has broad coverage, be harsh — most new skills will be redundant.
 
-Return a JSON array. Each item:
+Hard rules:
+- EXCLUDE AI platforms/tools (claude-code, codex, gemini-cli, cursor, copilot, n8n, etc.)
+- EXCLUDE MCP servers (require config-file setup, not SKILL.md install)
+- EXCLUDE CLI tool wrappers — only skills that provide AI coding instructions
+- incremental_value must account for overlap with already-installed skills
+- If a candidate covers ground already covered by installed skills → low incremental_value
+- Only recommend if incremental_value >= 6. Return empty array if nothing clears that bar.
+
+Return a JSON object:
 {
-  "slug": string,
-  "rank": number,
-  "explanation": string (one brutal sentence on WHY this fits — no filler),
-  "relevance": number 1-10 (how much the project stack needs this),
-  "usefulness": number 1-10 (actual day-to-day value — most skills are 4-6, exceptional ones are 8+),
-  "quality": number 1-10 (packaging and content quality based on description — be harsh)
+  "coverage_summary": string (1-2 sentences: how well-covered is this project already?),
+  "well_covered": boolean (true if installed skills already cover the project well),
+  "recommendations": [
+    {
+      "slug": string,
+      "rank": number,
+      "explanation": string (one brutal sentence — what gap does this fill?),
+      "relevance": number 1-10,
+      "usefulness": number 1-10,
+      "quality": number 1-10,
+      "incremental_value": number 1-10 (key metric: value added BEYOND what's installed)
+    }
+  ]
 }
 
-Return only valid JSON array, no markdown fences.`,
+Return only valid JSON, no markdown fences.`,
       },
     ],
   })
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : '[]'
-  let rankings: Array<{
-    slug: string
-    rank: number
-    explanation: string
-    relevance: number
-    usefulness: number
-    quality: number
-  }> = []
-  try {
-    rankings = JSON.parse(text) as typeof rankings
-  } catch {
-    return []
+  const text = message.content[0].type === 'text' ? message.content[0].text : '{}'
+  let parsed: {
+    coverage_summary: string
+    well_covered: boolean
+    recommendations: Array<{
+      slug: string
+      rank: number
+      explanation: string
+      relevance: number
+      usefulness: number
+      quality: number
+      incremental_value: number
+    }>
   }
 
-  return rankings
+  try {
+    parsed = JSON.parse(text) as typeof parsed
+  } catch {
+    return { skills: [], wellCovered: false, coverageSummary: 'Failed to parse Claude response.' }
+  }
+
+  const skills = (parsed.recommendations ?? [])
+    .filter(r => r.incremental_value >= INCREMENTAL_VALUE_THRESHOLD)
     .map(r => {
       const entry = candidates.find(c => c.slug === r.slug)
       if (!entry) return null
-      const overall = Math.round((r.relevance * 0.4 + r.usefulness * 0.4 + r.quality * 0.2) * 10) / 10
+      const overall = Math.round(
+        (r.relevance * 0.3 + r.usefulness * 0.3 + r.quality * 0.1 + r.incremental_value * 0.3) * 10
+      ) / 10
       return {
         ...entry,
         rank: r.rank,
@@ -106,9 +144,16 @@ Return only valid JSON array, no markdown fences.`,
         usefulness: r.usefulness,
         quality: r.quality,
         overall,
+        incrementalValue: r.incremental_value,
       }
     })
     .filter((r): r is RankedSkill => r !== null)
+
+  return {
+    skills,
+    wellCovered: parsed.well_covered ?? false,
+    coverageSummary: parsed.coverage_summary ?? '',
+  }
 }
 
 function tagBasedRanking(
@@ -129,7 +174,10 @@ function tagBasedRanking(
       const relevance = Math.min(tagHits * 2 + 2, 10)
       const usefulness = Math.min(starScore + tagHits, 8)
       const quality = starScore
-      const overall = Math.round((relevance * 0.4 + usefulness * 0.4 + quality * 0.2) * 10) / 10
+      const incrementalValue = tagHits > 0 ? Math.min(tagHits * 3 + starScore, 10) : 2
+      const overall = Math.round(
+        (relevance * 0.3 + usefulness * 0.3 + quality * 0.1 + incrementalValue * 0.3) * 10
+      ) / 10
       return {
         ...c,
         score: tagHits + starScore,
@@ -138,10 +186,11 @@ function tagBasedRanking(
         usefulness,
         quality,
         overall,
+        incrementalValue,
       }
     })
-    .filter(c => c.score > 0)
-    .sort((a, b) => b.score - a.score)
+    .filter(c => c.score > 0 && c.incrementalValue >= INCREMENTAL_VALUE_THRESHOLD)
+    .sort((a, b) => b.incrementalValue - a.incrementalValue)
     .slice(0, 10)
     .map((c, i) => ({ ...c, rank: i + 1 }))
 }

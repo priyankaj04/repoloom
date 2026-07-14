@@ -15,10 +15,11 @@ export interface ProjectFingerprint {
 export interface RankedSkill extends CatalogEntry {
   rank: number
   explanation: string
-  relevance: number   // 1-10
-  usefulness: number  // 1-10
-  quality: number     // 1-10
-  overall: number     // weighted average
+  relevance: number        // 1-10: how much this stack needs it
+  usefulness: number       // 1-10: day-to-day value
+  quality: number          // 1-10: content/packaging quality
+  overall: number          // weighted average
+  incrementalValue: number // 1-10: value added BEYOND what's already installed — the key metric
 }
 
 export type SkillType = 'skill' | 'plugin' | 'mcp-server' | 'unknown'

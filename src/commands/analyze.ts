@@ -58,33 +58,41 @@ export async function analyzeCommand(): Promise<void> {
       spinner.start(`Fetching skills from skillsllm.com (platform: ${platform})...`)
     }
 
-    const ranked = await rankSkills(fp)
+    const result = await rankSkills(fp)
     spinner.stop()
 
-    if (ranked.length === 0) {
-      console.log('No new skills found (all relevant skills may already be installed).')
+    console.log(`\nPlatform: ${platform} | Project: ${fp.languages.join('+')} ${fp.frameworks.join('+') || ''}`)
+    console.log(`Coverage: ${result.coverageSummary}\n`)
+
+    if (result.wellCovered && result.skills.length === 0) {
+      console.log('Your skill coverage is solid — no high-value additions found.')
+      console.log(`Already installed: ${fp.installedSkills.length} skills`)
       return
     }
 
-    console.log(`\nPlatform: ${platform} | Project: ${fp.languages.join('+')} ${fp.frameworks.join('+') || ''}\n`)
-    console.log('Recommended skills (brutal scoring):\n')
+    if (result.skills.length === 0) {
+      console.log('No skills found that add meaningful incremental value.')
+      return
+    }
 
-    for (const s of ranked) {
+    console.log(`${result.skills.length} skill(s) add real value (incremental ≥6/10):\n`)
+
+    for (const s of result.skills) {
       const stars = s.stars > 0 ? `★${(s.stars / 1000).toFixed(1)}k` : '★?'
-      const overallLabel = scoreLabel(s.overall)
       console.log(`  ${s.rank}. ${s.name}  ${stars}  [${s.category}]`)
       console.log(`     ${s.explanation}`)
-      console.log(`     Relevance ${s.relevance}/10  Usefulness ${s.usefulness}/10  Quality ${s.quality}/10`)
-      console.log(`     Overall: ${scoreBar(s.overall)} ${s.overall}/10 — ${overallLabel}`)
+      console.log(`     Incremental: ${scoreBar(s.incrementalValue)} ${s.incrementalValue}/10  Overall: ${s.overall}/10`)
+      console.log(`     R:${s.relevance} U:${s.usefulness} Q:${s.quality}`)
       console.log(`     ${s.githubUrl || `https://skillsllm.com/skill/${s.slug}`}\n`)
     }
 
+    const ranked = result.skills
     const { selected } = await prompts({
       type: 'multiselect',
       name: 'selected',
       message: `Which skills to install? (→ ${LOCAL_SKILLS_DIR}/)`,
       choices: ranked.map(s => ({
-        title: `${s.name} ${s.overall}/10 ★${(s.stars / 1000).toFixed(1)}k`,
+        title: `${s.name}  +${s.incrementalValue}/10 incremental  ★${(s.stars / 1000).toFixed(1)}k`,
         value: s,
       })),
     })
