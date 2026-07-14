@@ -1,6 +1,6 @@
 {
   "name": "repoloom",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Analyze your project and install the right Claude Code skills",
   "type": "module",
   "bin": {
