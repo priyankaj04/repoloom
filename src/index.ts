@@ -15,6 +15,21 @@ const pkg = JSON.parse(
   fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8')
 ) as { version: string }
 
+// Check for newer npm version in background — print notice after command finishes
+async function checkUpdates(current: string): Promise<void> {
+  try {
+    const res = await fetch('https://registry.npmjs.org/repoloom/latest', { signal: AbortSignal.timeout(3000) })
+    if (!res.ok) return
+    const data = await res.json() as { version: string }
+    if (data.version !== current) {
+      console.log(`\n  Update available: ${current} → ${data.version}`)
+      console.log('  Run: npm install -g repoloom\n')
+    }
+  } catch { /* silent — offline or timeout */ }
+}
+
+const updateCheck = checkUpdates(pkg.version)
+
 const program = new Command()
 
 program
@@ -57,4 +72,4 @@ program
   .description('Scaffold a new skill or publish an existing one to npm')
   .action(publishCommand)
 
-program.parse()
+program.parseAsync().then(() => updateCheck)

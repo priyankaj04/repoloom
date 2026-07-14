@@ -31,9 +31,19 @@ export interface CatalogEntry {
   category: string
 }
 
+export type SkillType = 'skill' | 'plugin' | 'mcp-server' | 'unknown'
+
 export interface SkillDetail extends CatalogEntry {
   installCommands: Partial<Record<Platform, string>>
   primaryGitRepo: string | null
+  type: SkillType
+}
+
+export interface InstallResult {
+  slug: string
+  status: 'installed' | 'multi-installed' | 'no-skill-file' | 'git-failed'
+  type: SkillType
+  installedPaths: string[]
 }
 
 export async function fetchCategorySkills(
@@ -70,24 +80,93 @@ export async function fetchCategorySkills(
 
 export async function fetchSkillDetail(entry: CatalogEntry): Promise<SkillDetail> {
   const url = `${BASE}/skill/${entry.slug}`
+  const fallback: SkillDetail = {
+    ...entry,
+    installCommands: {},
+    primaryGitRepo: entry.githubUrl || null,
+    type: entry.category === 'mcp-servers' ? 'mcp-server' : 'unknown',
+  }
   try {
     const res = await fetch(url)
-    if (!res.ok) return { ...entry, installCommands: {}, primaryGitRepo: entry.githubUrl || null }
+    if (!res.ok) return fallback
     const html = await res.text()
     const installCommands = parseInstallCommands(html)
     const primaryGitRepo = extractPrimaryGitRepo(html) ?? entry.githubUrl ?? null
-    return { ...entry, installCommands, primaryGitRepo }
+    const type: SkillType = entry.category === 'mcp-servers' ? 'mcp-server'
+      : html.includes('.claude-plugin') || html.includes('/plugin install') ? 'plugin'
+      : html.includes('SKILL.md') || html.includes('skill.md') ? 'skill'
+      : 'unknown'
+    return { ...entry, installCommands, primaryGitRepo, type }
   } catch {
-    return { ...entry, installCommands: {}, primaryGitRepo: entry.githubUrl || null }
+    return fallback
   }
 }
 
-// Auto-install a skill from its GitHub repo into .claude/skills/{slug}/
+export type KnownPlatform = 'claude-code' | 'cursor' | 'copilot' | 'codex-cli' | 'gemini-cli' | 'antigravity' | 'opencode' | 'kimi-code' | 'factory-droid' | 'pi' | 'unknown'
+
+export function detectPlatform(): KnownPlatform {
+  if (fs.existsSync(path.join(os.homedir(), '.claude'))) return 'claude-code'
+  if (fs.existsSync(path.join(os.homedir(), '.cursor'))) return 'cursor'
+  try { execFileSync('which', ['codex'], { stdio: 'pipe' }); return 'codex-cli' } catch { /* */ }
+  try { execFileSync('which', ['gemini'], { stdio: 'pipe' }); return 'gemini-cli' } catch { /* */ }
+  try { execFileSync('which', ['aider'], { stdio: 'pipe' }); return 'unknown' } catch { /* */ }
+  return 'unknown'
+}
+
+// Returns the project-local skill directory for the given platform
+export function platformSkillDir(projectDir: string, platform: KnownPlatform): string | null {
+  switch (platform) {
+    case 'claude-code':   return path.join(projectDir, '.claude', 'skills')
+    case 'cursor':        return path.join(projectDir, '.cursor', 'rules')
+    case 'copilot':       return null  // appends to .github/copilot-instructions.md
+    case 'codex-cli':     return path.join(projectDir, '.codex', 'skills')
+    default:              return null  // unknown — show manual command
+  }
+}
+
+// Install a SKILL.md into the right location for a given platform
+export function installSkillForPlatform(
+  skillMdContent: string,
+  skillName: string,
+  projectDir: string,
+  platform: KnownPlatform
+): { ok: boolean; path: string; note?: string } {
+  switch (platform) {
+    case 'claude-code': {
+      const dir = path.join(projectDir, '.claude', 'skills', skillName)
+      fs.mkdirSync(dir, { recursive: true })
+      fs.writeFileSync(path.join(dir, 'SKILL.md'), skillMdContent)
+      return { ok: true, path: `.claude/skills/${skillName}/SKILL.md` }
+    }
+    case 'cursor': {
+      const dir = path.join(projectDir, '.cursor', 'rules')
+      fs.mkdirSync(dir, { recursive: true })
+      const file = path.join(dir, `${skillName}.md`)
+      fs.writeFileSync(file, skillMdContent)
+      return { ok: true, path: `.cursor/rules/${skillName}.md` }
+    }
+    case 'copilot': {
+      const file = path.join(projectDir, '.github', 'copilot-instructions.md')
+      fs.mkdirSync(path.dirname(file), { recursive: true })
+      const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''
+      const separator = `\n\n<!-- repoloom: ${skillName} -->\n`
+      if (!existing.includes(`repoloom: ${skillName}`)) {
+        fs.writeFileSync(file, existing + separator + skillMdContent)
+      }
+      return { ok: true, path: `.github/copilot-instructions.md` }
+    }
+    default:
+      return { ok: false, path: '', note: `Platform ${platform} — manual install required` }
+  }
+}
+
+// Install skill(s) from a GitHub repo. Handles multi-skill repos and plugin repos.
 export function installSkillFromGit(
   githubUrl: string,
   slug: string,
-  targetDir: string
-): 'installed' | 'no-skill-file' | 'git-failed' {
+  baseSkillsDir: string,
+  platform: KnownPlatform = 'claude-code'
+): InstallResult {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'repoloom-'))
   try {
     execFileSync('git', ['clone', '--depth', '1', githubUrl, tmp], {
@@ -95,58 +174,113 @@ export function installSkillFromGit(
       timeout: 30000,
     })
 
-    // Search for SKILL.md / skill.md in common locations
-    const skillDir = findSkillDir(tmp, slug)
-    if (!skillDir) return 'no-skill-file'
+    const type = detectRepoType(tmp)
+    const skillDirs = findAllSkillDirs(tmp)
 
-    fs.mkdirSync(targetDir, { recursive: true })
-    // Copy all files from the skill directory
-    for (const file of fs.readdirSync(skillDir, { withFileTypes: true })) {
-      if (file.isFile()) {
-        fs.copyFileSync(
-          path.join(skillDir, file.name),
-          path.join(targetDir, file.name)
-        )
+    if (skillDirs.length === 0) {
+      return { slug, status: 'no-skill-file', type, installedPaths: [] }
+    }
+
+    const installedPaths: string[] = []
+
+    if (platform === 'claude-code' || platform === 'codex-cli') {
+      // Copy full skill directory
+      for (const { name, dirPath } of skillDirs) {
+        const targetDir = path.join(baseSkillsDir, name)
+        fs.mkdirSync(targetDir, { recursive: true })
+        for (const file of fs.readdirSync(dirPath, { withFileTypes: true })) {
+          if (file.isFile()) {
+            fs.copyFileSync(path.join(dirPath, file.name), path.join(targetDir, file.name))
+          }
+        }
+        installedPaths.push(targetDir)
+      }
+    } else {
+      // For other platforms: install SKILL.md content via platform-specific method
+      const projectDir = path.dirname(path.dirname(baseSkillsDir)) // baseSkillsDir is project/.claude/skills
+      for (const { name, dirPath } of skillDirs) {
+        const skillMdPath = fs.readdirSync(dirPath).find(f => f.toLowerCase() === 'skill.md')
+        if (!skillMdPath) continue
+        const content = fs.readFileSync(path.join(dirPath, skillMdPath), 'utf8')
+        const result = installSkillForPlatform(content, name, projectDir, platform)
+        if (result.ok) installedPaths.push(result.path)
       }
     }
-    return 'installed'
+
+    return {
+      slug,
+      status: installedPaths.length > 1 ? 'multi-installed' : 'installed',
+      type,
+      installedPaths,
+    }
   } catch {
-    return 'git-failed'
+    return { slug, status: 'git-failed', type: 'unknown', installedPaths: [] }
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true })
   }
 }
 
-function findSkillDir(repoRoot: string, slug: string): string | null {
-  // 1. Root level SKILL.md / skill.md
-  const rootFiles = fs.readdirSync(repoRoot)
-  if (rootFiles.some(f => f.toLowerCase() === 'skill.md')) return repoRoot
+function detectRepoType(repoRoot: string): SkillType {
+  if (fs.existsSync(path.join(repoRoot, '.claude-plugin'))) return 'plugin'
+  const allFiles = getAllFiles(repoRoot, 3)
+  if (allFiles.some(f => path.basename(f).toLowerCase() === 'skill.md')) return 'skill'
+  // Check tags/description via package.json or README mentions of MCP
+  const pkgPath = path.join(repoRoot, 'package.json')
+  if (fs.existsSync(pkgPath)) {
+    const pkg = fs.readFileSync(pkgPath, 'utf8')
+    if (pkg.includes('mcp') || pkg.includes('model-context-protocol')) return 'mcp-server'
+  }
+  return 'unknown'
+}
 
-  // 2. skills/{slug}/ subdirectory (plugin format)
-  const skillsDir = path.join(repoRoot, 'skills')
-  if (fs.existsSync(skillsDir)) {
-    const subdirs = fs.readdirSync(skillsDir, { withFileTypes: true })
-      .filter(d => d.isDirectory())
-    for (const sub of subdirs) {
-      const subPath = path.join(skillsDir, sub.name)
-      const files = fs.readdirSync(subPath)
-      if (files.some(f => f.toLowerCase() === 'skill.md')) return subPath
+function findAllSkillDirs(repoRoot: string): Array<{ name: string; dirPath: string }> {
+  const found: Array<{ name: string; dirPath: string }> = []
+
+  // 1. Root has SKILL.md → whole repo is one skill
+  if (hasSkillMd(repoRoot)) {
+    found.push({ name: path.basename(repoRoot), dirPath: repoRoot })
+    return found
+  }
+
+  // 2. skills/ subdirectories (plugin format — may be a skill bundle)
+  for (const searchDir of [
+    path.join(repoRoot, 'skills'),
+    path.join(repoRoot, '.claude', 'skills'),
+  ]) {
+    if (!fs.existsSync(searchDir)) continue
+    for (const entry of fs.readdirSync(searchDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue
+      const subPath = path.join(searchDir, entry.name)
+      if (hasSkillMd(subPath)) {
+        found.push({ name: entry.name, dirPath: subPath })
+      }
     }
   }
 
-  // 3. .claude/skills/{slug}/ (nested plugin format)
-  const claudeSkillsDir = path.join(repoRoot, '.claude', 'skills')
-  if (fs.existsSync(claudeSkillsDir)) {
-    const subdirs = fs.readdirSync(claudeSkillsDir, { withFileTypes: true })
-      .filter(d => d.isDirectory())
-    for (const sub of subdirs) {
-      const subPath = path.join(claudeSkillsDir, sub.name)
-      const files = fs.readdirSync(subPath)
-      if (files.some(f => f.toLowerCase() === 'skill.md')) return subPath
-    }
-  }
+  return found
+}
 
-  return null
+function hasSkillMd(dir: string): boolean {
+  try {
+    return fs.readdirSync(dir).some(f => f.toLowerCase() === 'skill.md')
+  } catch {
+    return false
+  }
+}
+
+function getAllFiles(dir: string, maxDepth: number): string[] {
+  if (maxDepth <= 0) return []
+  const result: string[] = []
+  try {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isFile()) result.push(full)
+      else if (entry.isDirectory() && !entry.name.startsWith('.')) {
+        result.push(...getAllFiles(full, maxDepth - 1))
+      }
+    }
+  } catch { /* */ }
+  return result
 }
 
 function parseListingPage(html: string, category: string): CatalogEntry[] {

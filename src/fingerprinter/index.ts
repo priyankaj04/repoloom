@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import type { ProjectFingerprint } from '../types.js'
 
 
@@ -84,8 +85,21 @@ function detectMonorepo(dir: string): boolean {
   )
 }
 
-function detectInstalledSkills(_dir: string): string[] {
-  return []
+function detectInstalledSkills(dir: string): string[] {
+  const found = new Set<string>()
+  const searchDirs = [
+    path.join(dir, '.claude', 'skills'),
+    path.join(dir, '.claude', 'plugins'),
+    path.join(os.homedir(), '.claude', 'skills'),
+    path.join(os.homedir(), '.claude', 'plugins'),
+  ]
+  for (const d of searchDirs) {
+    if (!fs.existsSync(d)) continue
+    fs.readdirSync(d, { withFileTypes: true })
+      .filter(e => e.isDirectory())
+      .forEach(e => found.add(e.name))
+  }
+  return [...found]
 }
 
 function exists(dir: string, rel: string): boolean {

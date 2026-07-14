@@ -87,14 +87,15 @@ function readLock(projectDir: string): LockFile | null {
 }
 
 function updateLock(projectDir: string, packageName: string, version: string): void {
-  const lock = readLock(projectDir) ?? { version: 1 as const, skills: {} }
-  lock.skills[packageName] = version
+  const existing = readLock(projectDir)
+  const lock: LockFile = existing ?? { version: 2, skills: {} }
+  ;(lock.skills as Record<string, string>)[packageName] = version
   fs.writeFileSync(path.join(projectDir, LOCK_FILE), JSON.stringify(lock, null, 2) + '\n')
 }
 
 function removeFromLock(projectDir: string, packageName: string): void {
   const lock = readLock(projectDir)
   if (!lock) return
-  delete lock.skills[packageName]
+  delete (lock.skills as Record<string, string>)[packageName]
   fs.writeFileSync(path.join(projectDir, LOCK_FILE), JSON.stringify(lock, null, 2) + '\n')
 }

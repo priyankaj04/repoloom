@@ -1,58 +1,90 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import ora from 'ora'
 import prompts from 'prompts'
 import { fingerprint } from '../fingerprinter/index.js'
 import { rankSkills } from '../ranker/index.js'
-import { fetchSkillDetail, installSkillFromGit } from '../catalog/fetcher.js'
-import type { RankedSkill } from '../types.js'
+import { fetchSkillDetail, installSkillFromGit, detectPlatform } from '../catalog/fetcher.js'
+import type { RankedSkill, LockFile } from '../types.js'
+
+const LOCK_FILE = 'repoloom.lock'
+
+function writeLock(projectDir: string, slug: string, githubUrl: string): void {
+  const lockPath = path.join(projectDir, LOCK_FILE)
+  let lock: LockFile
+  try {
+    lock = JSON.parse(fs.readFileSync(lockPath, 'utf8')) as LockFile
+  } catch {
+    lock = { version: 2, skills: {} }
+  }
+  lock.skills[slug] = githubUrl
+  fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2) + '\n')
+}
 
 const LOCAL_SKILLS_DIR = path.join('.claude', 'skills')
+const GLOBAL_SKILLS_DIR = path.join(os.homedir(), '.claude', 'skills')
 
-const QUALITY_LABEL = (stars: number) => {
-  if (stars >= 50000) return '⭐⭐⭐ Popular'
-  if (stars >= 10000) return '⭐⭐  Established'
-  if (stars >= 1000) return '⭐   Growing'
-  return '     New'
+function scoreBar(score: number): string {
+  const filled = Math.round(score)
+  return '█'.repeat(filled) + '░'.repeat(10 - filled)
+}
+
+function scoreLabel(score: number): string {
+  if (score >= 8) return 'Excellent'
+  if (score >= 6) return 'Good'
+  if (score >= 4) return 'Decent'
+  return 'Weak'
 }
 
 export async function analyzeCommand(): Promise<void> {
   const projectDir = process.cwd()
+  const platform = detectPlatform()
   const spinner = ora('Analyzing project...').start()
 
   try {
     const fp = fingerprint(projectDir)
-    spinner.text = 'Fetching skills from skillsllm.com...'
+
+    const alreadyInstalled = fp.installedSkills
+    if (alreadyInstalled.length > 0) {
+      spinner.info(`Already installed (skipped): ${alreadyInstalled.join(', ')}`)
+      spinner.start()
+    }
+
+    spinner.text = `Fetching skills from skillsllm.com (platform: ${platform})...`
 
     if (!process.env.ANTHROPIC_API_KEY) {
       spinner.warn('ANTHROPIC_API_KEY not set — using tag-based matching (no LLM ranking)')
-      spinner.start('Fetching skills from skillsllm.com...')
+      spinner.start(`Fetching skills from skillsllm.com (platform: ${platform})...`)
     }
 
     const ranked = await rankSkills(fp)
     spinner.stop()
 
     if (ranked.length === 0) {
-      console.log('No matching skills found for this project.')
+      console.log('No new skills found (all relevant skills may already be installed).')
       return
     }
 
-    console.log('\nRecommended skills:\n')
+    console.log(`\nPlatform: ${platform} | Project: ${fp.languages.join('+')} ${fp.frameworks.join('+') || ''}\n`)
+    console.log('Recommended skills (brutal scoring):\n')
+
     for (const s of ranked) {
-      const quality = QUALITY_LABEL(s.stars)
-      const stars = s.stars > 0 ? `★${(s.stars / 1000).toFixed(1)}k` : ''
-      console.log(`  ${s.rank}. ${s.name} ${stars}`)
-      console.log(`     ${quality}  [${s.category}]`)
+      const stars = s.stars > 0 ? `★${(s.stars / 1000).toFixed(1)}k` : '★?'
+      const overallLabel = scoreLabel(s.overall)
+      console.log(`  ${s.rank}. ${s.name}  ${stars}  [${s.category}]`)
       console.log(`     ${s.explanation}`)
-      console.log(`     ${s.githubUrl || s.slug}\n`)
+      console.log(`     Relevance ${s.relevance}/10  Usefulness ${s.usefulness}/10  Quality ${s.quality}/10`)
+      console.log(`     Overall: ${scoreBar(s.overall)} ${s.overall}/10 — ${overallLabel}`)
+      console.log(`     ${s.githubUrl || `https://skillsllm.com/skill/${s.slug}`}\n`)
     }
 
     const { selected } = await prompts({
       type: 'multiselect',
       name: 'selected',
-      message: 'Which skills to install? (local — .claude/skills/)',
+      message: `Which skills to install? (→ ${LOCAL_SKILLS_DIR}/)`,
       choices: ranked.map(s => ({
-        title: `${s.name} ${s.stars > 0 ? `★${(s.stars / 1000).toFixed(1)}k` : ''}`,
+        title: `${s.name} ${s.overall}/10 ★${(s.stars / 1000).toFixed(1)}k`,
         value: s,
       })),
     })
@@ -73,60 +105,77 @@ export async function analyzeCommand(): Promise<void> {
     )
     fetchSpinner.stop()
 
-    const localSkillsDir = path.join(projectDir, LOCAL_SKILLS_DIR)
-    console.log(`Installing to ${LOCAL_SKILLS_DIR}/\n`)
     console.log('─'.repeat(60))
 
-    for (const detail of details) {
-      const installSpinner = ora(`Installing ${detail.name}...`).start()
-      const targetDir = path.join(localSkillsDir, detail.slug)
+    let installedCount = 0
+    let multiCount = 0
 
-      // Skip if already installed
+    for (const detail of details) {
+      const installSpinner = ora(`Installing ${detail.name} [${detail.type}]...`).start()
+      const targetBaseDir = path.join(projectDir, LOCAL_SKILLS_DIR)
+      const targetDir = path.join(targetBaseDir, detail.slug)
+
+      // Already installed
       if (fs.existsSync(targetDir)) {
-        installSpinner.warn(`${detail.name} already installed at ${LOCAL_SKILLS_DIR}/${detail.slug}`)
+        installSpinner.warn(`${detail.name} already at ${LOCAL_SKILLS_DIR}/${detail.slug}/`)
         continue
       }
 
       const gitRepo = detail.primaryGitRepo
-      if (gitRepo) {
-        const result = installSkillFromGit(gitRepo, detail.slug, targetDir)
-
-        if (result === 'installed') {
-          installSpinner.succeed(`Installed ${detail.name} → ${LOCAL_SKILLS_DIR}/${detail.slug}/`)
-          continue
-        } else if (result === 'no-skill-file') {
-          installSpinner.warn(`${detail.name}: no SKILL.md found in repo — showing manual commands`)
-        } else {
-          installSpinner.warn(`${detail.name}: git clone failed — showing manual commands`)
+      if (!gitRepo) {
+        installSpinner.warn(`${detail.name}: no git repo found`)
+        if (Object.keys(detail.installCommands).length > 0) {
+          console.log(`\n  Manual install for ${detail.name}:`)
+          for (const [p, cmd] of Object.entries(detail.installCommands)) {
+            console.log(`    [${p}] ${cmd.split('\n')[0]}`)
+          }
         }
-      } else {
-        installSpinner.stop()
+        continue
       }
 
-      // Fallback: print install commands
-      const cmds = Object.entries(detail.installCommands)
-      if (cmds.length > 0) {
-        console.log(`\n  ${detail.name} — manual install:`)
-        for (const [platform, cmd] of cmds) {
-          console.log(`\n  ${platform}:`)
-          // Only show first line of multi-line commands for brevity
-          console.log(`    ${cmd.split('\n')[0]}`)
+      const result = installSkillFromGit(gitRepo, detail.slug, targetBaseDir, platform)
+
+      switch (result.status) {
+        case 'installed':
+          installedCount++
+          writeLock(projectDir, detail.slug, gitRepo)
+          installSpinner.succeed(
+            `${detail.name} [${result.type}] → ${path.relative(projectDir, result.installedPaths[0])}/`
+          )
+          break
+
+        case 'multi-installed': {
+          multiCount += result.installedPaths.length
+          writeLock(projectDir, detail.slug, gitRepo)
+          const names = result.installedPaths.map(p => path.basename(p)).join(', ')
+          installSpinner.succeed(
+            `${detail.name} [bundle: ${result.installedPaths.length} skills] → ${names}`
+          )
+          break
         }
-        console.log(`\n  Full details: https://skillsllm.com/skill/${detail.slug}`)
-      } else {
-        console.log(`\n  ${detail.name}: https://skillsllm.com/skill/${detail.slug}`)
+
+        case 'no-skill-file':
+          installSpinner.warn(`${detail.name}: no SKILL.md in repo`)
+          if (detail.type === 'mcp-server') {
+            console.log(`\n  MCP server — add to your claude config:`)
+            console.log(`    https://skillsllm.com/skill/${detail.slug}`)
+          } else if (Object.keys(detail.installCommands).length > 0) {
+            const cmd = Object.values(detail.installCommands)[0]
+            console.log(`\n  Run: ${cmd?.split('\n')[0]}`)
+          }
+          break
+
+        case 'git-failed':
+          installSpinner.fail(`${detail.name}: git clone failed — ${gitRepo}`)
+          break
       }
     }
 
-    console.log('\n' + '─'.repeat(60))
-
-    const installedCount = details.filter(d =>
-      fs.existsSync(path.join(localSkillsDir, d.slug))
-    ).length
-
-    if (installedCount > 0) {
-      console.log(`\n${installedCount} skill(s) installed to ${LOCAL_SKILLS_DIR}/`)
-      console.log('Restart Claude Code to pick up the new skills.')
+    console.log('─'.repeat(60))
+    const total = installedCount + multiCount
+    if (total > 0) {
+      console.log(`\n${total} skill(s) installed to ${LOCAL_SKILLS_DIR}/`)
+      console.log('Restart Claude Code to load the new skills.')
     }
   } catch (err) {
     spinner.fail('Failed')
