@@ -3,7 +3,7 @@ import type { ProjectFingerprint, RankedSkill } from '../types.js'
 import type { CatalogEntry } from '../catalog/fetcher.js'
 import { fetchCatalog } from '../catalog/index.js'
 
-const INCREMENTAL_VALUE_THRESHOLD = 5  // skip anything adding ≤5/10 incremental value
+const INCREMENTAL_VALUE_THRESHOLD = 5
 
 export interface RankResult {
   skills: RankedSkill[]
@@ -45,23 +45,23 @@ async function claudeRanking(
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
+    max_tokens: 4096,
     messages: [
       {
         role: 'user',
-        content: `You are brutally honest at evaluating AI agent skills for software projects.
+        content: `You are a brutal, no-nonsense senior engineer evaluating AI agent skills for a software project.
 
 Project fingerprint:
 ${JSON.stringify(fingerprint, null, 2)}
 
-Already installed skills (DO NOT recommend these):
+Already installed skills (EXCLUDE from recommendations — do NOT repeat these):
 ${fingerprint.installedSkills.length > 0 ? fingerprint.installedSkills.join(', ') : 'none'}
 
-Candidate skills NOT yet installed:
+Available candidate skills NOT yet installed:
 ${JSON.stringify(
   [...candidates]
     .sort((a, b) => b.stars - a.stars)
-    .slice(0, 80)
+    .slice(0, 100)
     .map(c => ({
       slug: c.slug,
       name: c.name,
@@ -74,30 +74,44 @@ ${JSON.stringify(
   2
 )}
 
-Your job: evaluate INCREMENTAL VALUE each candidate adds GIVEN what's already installed.
-If the user already has broad coverage, be harsh — most new skills will be redundant.
+TASK: Think about what a complete, production-ready skill set looks like for this specific project.
+Consider ALL dimensions:
+- Code quality & review patterns
+- Testing strategy (unit, integration, E2E, security)
+- Security & hardening
+- Performance optimization
+- CI/CD & deployment
+- Observability & debugging
+- Architecture & API design
+- Frontend patterns (if applicable)
+- Backend patterns (if applicable)
+- Git workflow & versioning
+- Documentation
+
+Then look at what's already installed and find EVERY candidate skill that fills a real gap.
+Return ALL skills worth having — not just the top 1. A project typically needs 8-15 skills total.
 
 Hard rules:
-- EXCLUDE AI platforms/tools (claude-code, codex, gemini-cli, cursor, copilot, n8n, etc.)
-- EXCLUDE MCP servers (require config-file setup, not SKILL.md install)
-- EXCLUDE CLI tool wrappers — only skills that provide AI coding instructions
-- incremental_value must account for overlap with already-installed skills
-- If a candidate covers ground already covered by installed skills → low incremental_value
-- Only recommend if incremental_value >= 6. Return empty array if nothing clears that bar.
+- EXCLUDE AI platforms/tools (claude-code, codex, gemini-cli, cursor, copilot, n8n)
+- EXCLUDE MCP servers (config-file setup, not SKILL.md)
+- EXCLUDE pure CLI tool wrappers
+- ONLY skills providing AI coding instructions (SKILL.md / .claude-plugin)
+- Penalize skills that heavily overlap with already-installed ones
+- Be honest: skill bundles (like agent-skills with 20+ sub-skills) count as covering many areas
 
 Return a JSON object:
 {
-  "coverage_summary": string (1-2 sentences: how well-covered is this project already?),
-  "well_covered": boolean (true if installed skills already cover the project well),
+  "coverage_summary": string (2-3 sentences: what's covered, what's missing),
+  "well_covered": boolean (true only if installed skills genuinely cover all major areas),
   "recommendations": [
     {
       "slug": string,
-      "rank": number,
-      "explanation": string (one brutal sentence — what gap does this fill?),
+      "rank": number (1 = most important gap to fill),
+      "explanation": string (one sentence: what specific gap does this fill?),
       "relevance": number 1-10,
       "usefulness": number 1-10,
       "quality": number 1-10,
-      "incremental_value": number 1-10 (key metric: value added BEYOND what's installed)
+      "incremental_value": number 1-10 (value added beyond installed skills — be realistic, not stingy)
     }
   ]
 }
@@ -148,6 +162,7 @@ Return only valid JSON, no markdown fences.`,
       }
     })
     .filter((r): r is RankedSkill => r !== null)
+    .sort((a, b) => b.incrementalValue - a.incrementalValue || b.overall - a.overall)
 
   return {
     skills,
@@ -191,6 +206,5 @@ function tagBasedRanking(
     })
     .filter(c => c.score > 0 && c.incrementalValue >= INCREMENTAL_VALUE_THRESHOLD)
     .sort((a, b) => b.incrementalValue - a.incrementalValue)
-    .slice(0, 10)
     .map((c, i) => ({ ...c, rank: i + 1 }))
 }
