@@ -1,8 +1,0 @@
-{
-  "name": "react",
-  "description": "React development patterns, hooks, component design, and performance",
-  "tags": ["react", "javascript", "typescript", "frontend", "hooks"],
-  "triggers": { "dependencies": ["react"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

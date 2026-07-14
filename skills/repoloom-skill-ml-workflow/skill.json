@@ -1,8 +1,0 @@
-{
-  "name": "ml-workflow",
-  "description": "Production ML engineering — data contracts, reproducible training, evaluation, deployment, monitoring",
-  "tags": ["machine-learning", "python", "pytorch", "sklearn", "mlops"],
-  "triggers": { "dependencies": ["torch", "tensorflow", "sklearn", "scikit-learn", "transformers"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

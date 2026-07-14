@@ -1,9 +1,0 @@
-{
-  "name": "repoloom-skill-docker",
-  "version": "1.0.0",
-  "description": "Dockerfile best practices, multi-stage builds, compose patterns",
-  "main": "skill.md",
-  "files": ["skill.md", "skill.json"],
-  "keywords": ["repoloom-skill", "docker", "containers", "devops", "deployment"],
-  "license": "MIT"
-}

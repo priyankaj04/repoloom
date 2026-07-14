@@ -1,9 +1,0 @@
-{
-  "name": "repoloom-skill-typescript",
-  "version": "1.0.0",
-  "description": "TypeScript strict mode, type safety, generics, and utility types",
-  "main": "skill.md",
-  "files": ["skill.md", "skill.json"],
-  "keywords": ["repoloom-skill", "typescript", "javascript", "types", "strict"],
-  "license": "MIT"
-}

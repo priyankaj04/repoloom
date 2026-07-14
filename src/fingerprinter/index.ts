@@ -2,7 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { ProjectFingerprint } from '../types.js'
 
-const LOCAL_SKILLS_SUBDIR = path.join('.claude', 'skills')
 
 export function fingerprint(projectDir: string): ProjectFingerprint {
   return {
@@ -85,15 +84,8 @@ function detectMonorepo(dir: string): boolean {
   )
 }
 
-function detectInstalledSkills(dir: string): string[] {
-  const skills: string[] = []
-  const localDir = path.join(dir, LOCAL_SKILLS_SUBDIR)
-  if (fs.existsSync(localDir)) {
-    skills.push(
-      ...fs.readdirSync(localDir).filter(d => d.startsWith('repoloom-skill-'))
-    )
-  }
-  return [...new Set(skills)]
+function detectInstalledSkills(_dir: string): string[] {
+  return []
 }
 
 function exists(dir: string, rel: string): boolean {

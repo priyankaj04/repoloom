@@ -1,9 +1,0 @@
-{
-  "name": "repoloom-skill-python",
-  "version": "1.0.0",
-  "description": "Python best practices, type hints, error handling, and packaging",
-  "main": "skill.md",
-  "files": ["skill.md", "skill.json"],
-  "keywords": ["repoloom-skill", "python", "typing", "packaging"],
-  "license": "MIT"
-}

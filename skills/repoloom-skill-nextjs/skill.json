@@ -1,8 +1,0 @@
-{
-  "name": "nextjs",
-  "description": "Next.js App Router, Server Components, Turbopack, and SSR patterns",
-  "tags": ["nextjs", "react", "typescript", "ssr", "app-router"],
-  "triggers": { "dependencies": ["next"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

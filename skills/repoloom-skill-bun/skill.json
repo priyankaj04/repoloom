@@ -1,8 +1,0 @@
-{
-  "name": "bun",
-  "description": "Bun runtime — when to choose Bun, migration from Node, API differences, Vercel support",
-  "tags": ["bun", "runtime", "javascript", "typescript", "performance"],
-  "triggers": { "files": ["bun.lockb", "bunfig.toml"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

@@ -1,8 +1,0 @@
-{
-  "name": "nuxt",
-  "description": "Nuxt 4 patterns, hydration safety, SSR, route rules, and lazy loading",
-  "tags": ["nuxt", "vue", "typescript", "ssr", "nuxt4"],
-  "triggers": { "dependencies": ["nuxt"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

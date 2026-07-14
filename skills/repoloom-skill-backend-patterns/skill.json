@@ -1,8 +1,0 @@
-{
-  "name": "backend-patterns",
-  "description": "Backend architecture — layered design, DB optimization, caching, queuing",
-  "tags": ["backend", "architecture", "database", "caching", "nodejs"],
-  "triggers": { "dependencies": ["express", "fastify", "koa", "hapi", "nestjs"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

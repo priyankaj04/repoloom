@@ -1,8 +1,0 @@
-{
-  "name": "deployment",
-  "description": "Deployment patterns — Kubernetes, Vercel, cloud providers, CI/CD",
-  "tags": ["deployment", "kubernetes", "vercel", "cicd", "devops"],
-  "triggers": { "files": [".github/workflows", ".gitlab-ci.yml", "k8s", "kubernetes"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

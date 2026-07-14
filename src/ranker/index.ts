@@ -1,18 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { ProjectFingerprint, RankedSkill, SkillPackage } from '../types.js'
-import { searchSkillPackages } from './npm.js'
-import { getCacheKey, readCache, writeCache } from './cache.js'
+import type { ProjectFingerprint, RankedSkill } from '../types.js'
+import type { CatalogEntry } from '../catalog/fetcher.js'
+import { fetchCatalog } from '../catalog/index.js'
 
 export async function rankSkills(fingerprint: ProjectFingerprint): Promise<RankedSkill[]> {
-  const key = getCacheKey(fingerprint)
-  const cached = readCache(key)
-  if (cached) return cached
-
-  const available = await searchSkillPackages()
+  const available = await fetchCatalog(fingerprint)
   if (available.length === 0) return []
 
   const candidates = available.filter(
-    s => !fingerprint.installedSkills.includes(s.packageName)
+    s => !fingerprint.installedSkills.includes(s.slug)
   )
   if (candidates.length === 0) return []
 
@@ -20,14 +16,12 @@ export async function rankSkills(fingerprint: ProjectFingerprint): Promise<Ranke
     return tagBasedRanking(fingerprint, candidates)
   }
 
-  const ranked = await claudeRanking(fingerprint, candidates)
-  writeCache(key, ranked)
-  return ranked
+  return claudeRanking(fingerprint, candidates)
 }
 
 async function claudeRanking(
   fingerprint: ProjectFingerprint,
-  candidates: SkillPackage[]
+  candidates: CatalogEntry[]
 ): Promise<RankedSkill[]> {
   const client = new Anthropic()
 
@@ -37,42 +31,52 @@ async function claudeRanking(
     messages: [
       {
         role: 'user',
-        content: `You are a developer tool recommending Claude Code skills for software projects.
+        content: `You are a developer tool recommending AI agent skills and plugins for software projects.
 
 Project fingerprint:
 ${JSON.stringify(fingerprint, null, 2)}
 
-Available skills:
-${JSON.stringify(candidates.map(c => ({ packageName: c.packageName, manifest: c.manifest })), null, 2)}
+Available skills (from skillsllm.com):
+${JSON.stringify(
+  candidates.slice(0, 100).map(c => ({
+    slug: c.slug,
+    name: c.name,
+    description: c.description,
+    tags: c.tags,
+    category: c.category,
+    stars: c.stars,
+  })),
+  null,
+  2
+)}
 
-Return a JSON array of the top 5 most relevant skills, most relevant first.
-Each item: { "packageName": string, "rank": number, "explanation": string (one sentence) }
+Return a JSON array of the top 5 most relevant skills for this project, most relevant first.
+Each item: { "slug": string, "rank": number, "explanation": string (one sentence why it fits this project) }
 Only include skills from the available list. Return only valid JSON, no markdown fences.`,
       },
     ],
   })
 
   const text = message.content[0].type === 'text' ? message.content[0].text : '[]'
-  let rankings: Array<{ packageName: string; rank: number; explanation: string }> = []
+  let rankings: Array<{ slug: string; rank: number; explanation: string }> = []
   try {
     rankings = JSON.parse(text) as typeof rankings
   } catch {
-    // Claude returned non-JSON — fall back to empty (no recommendations)
     return []
   }
 
   return rankings
     .map(r => {
-      const pkg = candidates.find(c => c.packageName === r.packageName)
-      if (!pkg) return null
-      return { ...pkg, rank: r.rank, explanation: r.explanation }
+      const entry = candidates.find(c => c.slug === r.slug)
+      if (!entry) return null
+      return { ...entry, rank: r.rank, explanation: r.explanation }
     })
     .filter((r): r is RankedSkill => r !== null)
 }
 
 function tagBasedRanking(
   fingerprint: ProjectFingerprint,
-  candidates: SkillPackage[]
+  candidates: CatalogEntry[]
 ): RankedSkill[] {
   const projectTags = new Set([
     ...fingerprint.languages,
@@ -83,8 +87,9 @@ function tagBasedRanking(
 
   return candidates
     .map(c => {
-      const matched = c.manifest.tags.filter(t => projectTags.has(t))
-      return { ...c, score: matched.length, explanation: `Matches your stack: ${matched.join(', ')}` }
+      const matched = c.tags.filter(t => projectTags.has(t))
+      const score = matched.length + (c.stars > 1000 ? 1 : 0)
+      return { ...c, score, explanation: matched.length > 0 ? `Matches: ${matched.join(', ')}` : 'Popular in category' }
     })
     .filter(c => c.score > 0)
     .sort((a, b) => b.score - a.score)

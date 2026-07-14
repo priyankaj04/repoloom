@@ -1,7 +1,14 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { execSync } from 'node:child_process'
-import type { SkillManifest } from '../types.js'
+interface SkillManifest {
+  name: string
+  description: string
+  tags: string[]
+  triggers: { dependencies?: string[]; files?: string[] }
+  targets: string[]
+  version: string
+}
 
 const REQUIRED_FIELDS: (keyof SkillManifest)[] = [
   'name', 'description', 'tags', 'targets', 'version',

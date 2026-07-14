@@ -1,8 +1,0 @@
-{
-  "name": "mcp-server",
-  "description": "Build MCP servers with Node/TypeScript SDK — tools, resources, prompts, Zod validation",
-  "tags": ["mcp", "typescript", "sdk", "tools", "ai"],
-  "triggers": { "dependencies": ["@modelcontextprotocol/sdk"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

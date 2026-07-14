@@ -24,9 +24,7 @@ program
 
 program
   .command('analyze')
-  .description('Fingerprint project and recommend skills')
-  .option('--local', 'install skills to .claude/skills/ (project-local)')
-  .option('--global', 'install skills to ~/.claude/plugins/ (user-global)')
+  .description('Fingerprint project and show recommended skills with install commands')
   .action(analyzeCommand)
 
 program

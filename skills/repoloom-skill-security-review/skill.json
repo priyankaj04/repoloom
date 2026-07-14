@@ -1,8 +1,0 @@
-{
-  "name": "security-review",
-  "description": "Security best practices — OWASP top 10, auth patterns, input validation, secrets",
-  "tags": ["security", "owasp", "auth", "backend", "validation"],
-  "triggers": { "dependencies": ["express", "fastapi", "django", "fastify", "nestjs"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

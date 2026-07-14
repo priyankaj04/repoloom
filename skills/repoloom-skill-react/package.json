@@ -1,9 +1,0 @@
-{
-  "name": "repoloom-skill-react",
-  "version": "1.0.0",
-  "description": "React development patterns, hooks, component design, and performance",
-  "main": "skill.md",
-  "files": ["skill.md", "skill.json"],
-  "keywords": ["repoloom-skill", "react", "javascript", "typescript", "frontend"],
-  "license": "MIT"
-}

@@ -1,3 +1,7 @@
+import type { CatalogEntry, Platform, SkillDetail } from './catalog/fetcher.js'
+
+export type { CatalogEntry, Platform, SkillDetail }
+
 export interface ProjectFingerprint {
   packageManagers: string[]
   languages: string[]
@@ -8,26 +12,7 @@ export interface ProjectFingerprint {
   installedSkills: string[]
 }
 
-export interface SkillManifest {
-  name: string
-  description: string
-  tags: string[]
-  triggers: {
-    dependencies?: string[]
-    files?: string[]
-  }
-  targets: string[]
-  version: string
-}
-
-export interface SkillPackage {
-  packageName: string
-  manifest: SkillManifest
-  npmVersion: string
-  localPath?: string
-}
-
-export interface RankedSkill extends SkillPackage {
+export interface RankedSkill extends CatalogEntry {
   rank: number
   explanation: string
 }

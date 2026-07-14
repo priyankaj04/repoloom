@@ -1,8 +1,0 @@
-{
-  "name": "python-testing",
-  "description": "pytest patterns — fixtures, parametrize, mocking, coverage",
-  "tags": ["pytest", "python", "testing", "mocking"],
-  "triggers": { "dependencies": ["pytest"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

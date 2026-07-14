@@ -1,8 +1,0 @@
-{
-  "name": "e2e-testing",
-  "description": "Playwright E2E testing — page objects, selectors, CI integration",
-  "tags": ["playwright", "e2e", "testing", "automation", "typescript"],
-  "triggers": { "dependencies": ["@playwright/test", "playwright"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

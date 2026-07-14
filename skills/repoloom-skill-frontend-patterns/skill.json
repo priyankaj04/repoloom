@@ -1,8 +1,0 @@
-{
-  "name": "frontend-patterns",
-  "description": "Frontend architecture — component design, state management, performance",
-  "tags": ["frontend", "react", "vue", "typescript", "architecture"],
-  "triggers": { "dependencies": ["react", "vue", "svelte", "solid-js"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

@@ -1,8 +1,0 @@
-{
-  "name": "api-design",
-  "description": "REST API design — resource naming, status codes, pagination, versioning, error responses",
-  "tags": ["api", "rest", "backend", "http", "design"],
-  "triggers": { "dependencies": ["express", "fastapi", "fastify", "django", "flask"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

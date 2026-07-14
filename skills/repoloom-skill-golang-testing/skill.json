@@ -1,8 +1,0 @@
-{
-  "name": "golang-testing",
-  "description": "Go testing patterns — table-driven tests, benchmarks, testify",
-  "tags": ["go", "golang", "testing", "benchmarks"],
-  "triggers": { "files": ["go.mod"] },
-  "targets": ["claude-code"],
-  "version": "1.0.0"
-}

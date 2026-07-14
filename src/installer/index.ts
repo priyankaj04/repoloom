@@ -3,7 +3,6 @@ import path from 'node:path'
 import os from 'node:os'
 import { execFileSync } from 'node:child_process'
 import type { InstallOptions, LockFile } from '../types.js'
-import { findBundledSkill } from '../ranker/npm.js'
 
 const LOCAL_SKILLS_SUBDIR = path.join('.claude', 'skills')
 const LOCK_FILE = 'repoloom.lock'
@@ -22,34 +21,24 @@ export function install(
   packageName: string,
   version: string,
   projectDir: string,
-  opts: InstallOptions,
-  localPath?: string
+  opts: InstallOptions
 ): void {
   const dest = destDir(packageName, projectDir, opts.mode)
   if (fs.existsSync(dest) && !opts.force) return
 
-  const source = localPath ?? findBundledSkill(packageName)
-  if (source) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'repoloom-'))
+  try {
+    execFileSync('npm', ['pack', `${packageName}@${version}`, '--pack-destination', tmp], { stdio: 'pipe' })
+    const tarball = fs.readdirSync(tmp).find(f => f.endsWith('.tgz'))!
+    execFileSync('tar', ['-xzf', path.join(tmp, tarball), '-C', tmp], { stdio: 'pipe' })
+
     fs.mkdirSync(dest, { recursive: true })
     for (const file of ['skill.md', 'skill.json']) {
-      const src = path.join(source, file)
+      const src = path.join(tmp, 'package', file)
       if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dest, file))
     }
-  } else {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'repoloom-'))
-    try {
-      execFileSync('npm', ['pack', `${packageName}@${version}`, '--pack-destination', tmp], { stdio: 'pipe' })
-      const tarball = fs.readdirSync(tmp).find(f => f.endsWith('.tgz'))!
-      execFileSync('tar', ['-xzf', path.join(tmp, tarball), '-C', tmp], { stdio: 'pipe' })
-
-      fs.mkdirSync(dest, { recursive: true })
-      for (const file of ['skill.md', 'skill.json']) {
-        const src = path.join(tmp, 'package', file)
-        if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dest, file))
-      }
-    } finally {
-      fs.rmSync(tmp, { recursive: true, force: true })
-    }
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true })
   }
 
   if (opts.mode === 'local') updateLock(projectDir, packageName, version)
