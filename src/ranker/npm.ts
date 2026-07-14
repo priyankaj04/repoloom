@@ -1,47 +1,48 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { SkillManifest, SkillPackage } from '../types.js'
 
-const NPM_SEARCH = 'https://registry.npmjs.org/-/v1/search'
-const NPM_REGISTRY = 'https://registry.npmjs.org'
-const SKILL_PATTERN = /^(@[\w-]+\/)?repoloom-skill-/
-
-interface NpmSearchResult {
-  objects: Array<{ package: { name: string; version: string } }>
+function getBundledSkillsDir(): string {
+  const thisFile = fileURLToPath(import.meta.url)
+  // compiled to dist/ranker/npm.js — two levels up reaches package root
+  return path.join(path.dirname(thisFile), '../../skills')
 }
 
-interface NpmPackageManifest {
-  repoloom?: SkillManifest
+export function searchSkillPackages(): Promise<SkillPackage[]> {
+  return Promise.resolve(loadBundledSkills())
 }
 
-export async function searchSkillPackages(): Promise<SkillPackage[]> {
-  const res = await fetch(`${NPM_SEARCH}?text=repoloom-skill&size=100`)
-  if (!res.ok) throw new Error(`npm search failed: ${res.status}`)
-
-  const data = (await res.json()) as NpmSearchResult
-  const candidates = data.objects
-    .map(o => o.package)
-    .filter(p => SKILL_PATTERN.test(p.name))
+export function loadBundledSkills(): SkillPackage[] {
+  const skillsDir = getBundledSkillsDir()
+  if (!fs.existsSync(skillsDir)) return []
 
   const results: SkillPackage[] = []
-  for (const pkg of candidates) {
-    const manifest = await fetchManifest(pkg.name, pkg.version)
-    if (manifest) results.push({ packageName: pkg.name, manifest, npmVersion: pkg.version })
+  for (const entry of fs.readdirSync(skillsDir)) {
+    if (!entry.startsWith('repoloom-skill-')) continue
+    const dir = path.join(skillsDir, entry)
+    const manifestPath = path.join(dir, 'skill.json')
+    const pkgPath = path.join(dir, 'package.json')
+    if (!fs.existsSync(manifestPath)) continue
+    try {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as SkillManifest
+      const pkg = fs.existsSync(pkgPath)
+        ? (JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as { version?: string })
+        : {}
+      results.push({
+        packageName: entry,
+        manifest,
+        npmVersion: pkg.version ?? '1.0.0',
+        localPath: dir,
+      })
+    } catch {
+      // skip malformed skill
+    }
   }
   return results
 }
 
-async function fetchManifest(
-  packageName: string,
-  version: string
-): Promise<SkillManifest | null> {
-  try {
-    const encoded = packageName.startsWith('@')
-      ? packageName.replace('/', '%2F')
-      : packageName
-    const res = await fetch(`${NPM_REGISTRY}/${encoded}/${version}`)
-    if (!res.ok) return null
-    const data = (await res.json()) as NpmPackageManifest
-    return data.repoloom ?? null
-  } catch {
-    return null
-  }
+export function findBundledSkill(packageName: string): string | null {
+  const dir = path.join(getBundledSkillsDir(), packageName)
+  return fs.existsSync(dir) ? dir : null
 }

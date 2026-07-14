@@ -12,7 +12,8 @@
     "test:watch": "vitest"
   },
   "files": [
-    "dist"
+    "dist",
+    "skills"
   ],
   "engines": {
     "node": ">=20"

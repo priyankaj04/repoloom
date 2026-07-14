@@ -1,0 +1,9 @@
+{
+  "name": "repoloom-skill-e2e-testing",
+  "version": "1.0.0",
+  "description": "Playwright E2E testing — page objects, selectors, CI integration",
+  "main": "skill.md",
+  "files": ["skill.md", "skill.json"],
+  "keywords": ["repoloom-skill", "playwright", "e2e", "testing", "automation"],
+  "license": "MIT"
+}

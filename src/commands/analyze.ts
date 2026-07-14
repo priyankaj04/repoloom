@@ -55,7 +55,7 @@ export async function analyzeCommand(opts: {
     for (const skill of selected as typeof ranked) {
       const s = ora(`Installing ${skill.packageName}...`).start()
       try {
-        install(skill.packageName, skill.npmVersion, projectDir, { mode })
+        install(skill.packageName, skill.npmVersion, projectDir, { mode }, skill.localPath)
         s.succeed(`Installed ${skill.packageName}`)
       } catch (err) {
         s.fail(`Failed to install ${skill.packageName}`)

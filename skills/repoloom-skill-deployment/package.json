@@ -1,0 +1,9 @@
+{
+  "name": "repoloom-skill-deployment",
+  "version": "1.0.0",
+  "description": "Deployment patterns — Kubernetes, Vercel, cloud providers, CI/CD",
+  "main": "skill.md",
+  "files": ["skill.md", "skill.json"],
+  "keywords": ["repoloom-skill", "deployment", "kubernetes", "vercel", "cicd", "devops"],
+  "license": "MIT"
+}

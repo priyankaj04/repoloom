@@ -24,6 +24,7 @@ export interface SkillPackage {
   packageName: string
   manifest: SkillManifest
   npmVersion: string
+  localPath?: string
 }
 
 export interface RankedSkill extends SkillPackage {
