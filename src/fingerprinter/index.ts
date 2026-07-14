@@ -85,19 +85,24 @@ function detectMonorepo(dir: string): boolean {
   )
 }
 
+// Only count as "installed" dirs that contain a SKILL.md file
+// Excludes system dirs (cache, data, marketplaces) and old bundled repoloom-skill-* packages
 function detectInstalledSkills(dir: string): string[] {
   const found = new Set<string>()
   const searchDirs = [
     path.join(dir, '.claude', 'skills'),
-    path.join(dir, '.claude', 'plugins'),
     path.join(os.homedir(), '.claude', 'skills'),
-    path.join(os.homedir(), '.claude', 'plugins'),
   ]
   for (const d of searchDirs) {
     if (!fs.existsSync(d)) continue
-    fs.readdirSync(d, { withFileTypes: true })
-      .filter(e => e.isDirectory())
-      .forEach(e => found.add(e.name))
+    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue
+      const skillMd = path.join(d, entry.name, 'SKILL.md')
+      const skillMdLower = path.join(d, entry.name, 'skill.md')
+      if (fs.existsSync(skillMd) || fs.existsSync(skillMdLower)) {
+        found.add(entry.name)
+      }
+    }
   }
   return [...found]
 }
