@@ -5,6 +5,8 @@
     "addyosmani-agent-skills": "https://github.com/addyosmani/agent-skills",
     "claude-code-best-practice": "https://github.com/shanraisshan/claude-code-best-practice",
     "claude-bughunter": "https://github.com/elementalsouls/Claude-BugHunter",
-    "superpowers": "https://github.com/obra/superpowers"
+    "superpowers": "https://github.com/obra/superpowers",
+    "rtk": "https://github.com/rtk-ai/rtk",
+    "taste-skill": "https://github.com/Leonxlnx/taste-skill"
   }
 }
